@@ -35,9 +35,14 @@ Whole execution took 3.1223082542419434s.
 ## Checking results
 * To assess the translated content, it is recommended to use the diff command from your preferred version-control system. This allows you to compare the changes made in the ts-file and verify the accuracy of the translations.
 ![](comparison_cn.png)  
+
 ### Additional Features
 * CuteLingoExpress also handles the numerus form, providing support for translation involving plurals and singulars.
 * During development, a key goal was to preserve the original file structure to minimize the differences when comparing versions. This approach ensures that the changes made during translation are easily identifiable.
+
+## Software quality
+* Please execute the tests in `test_auto_trans.py` to check for regressions.  
+* `pylint` gives it a rating of 10/10.
 
 # Naming?
 * The name "CuteLingoExpress" combines elements from different aspects of the tool to convey its purpose and characteristics. It blends "cute" from Qt, "lingo" representing the language translation aspect, and "express" to emphasize the tool's speed and efficiency in translating Qt content. This name reflects the tool's goal of delivering delightful and rapid translations while capturing the essence of the Qt framework.
