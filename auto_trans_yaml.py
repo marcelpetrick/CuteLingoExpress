@@ -21,7 +21,12 @@ def translate_string(text: str, source_lang: str, target_lang: str) -> str:
         return text
 
     start = time.time()
-    result = translators.google(text, source_lang, target_lang)
+    result = translators.translate_text(
+        text,
+        translator="google",
+        from_language=source_lang,
+        to_language=target_lang
+    )
     print(f"translateString: {time.time() - start:.3f}s : {text} -> {result}")
     return result
 
