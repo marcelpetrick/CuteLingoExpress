@@ -14,6 +14,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+yaml = [
+  "ruamel.yaml==0.19.1",
+]
 dev = [
   "build==1.5.0",
   "coverage[toml]==7.15.4",
@@ -24,14 +27,14 @@ dev = [
 cutelingoexpress = "auto_trans:main"
 
 [tool.setuptools]
-py-modules = ["auto_trans", "version"]
+py-modules = ["auto_trans", "auto_trans_yaml", "version"]
 
 [tool.setuptools.dynamic]
 version = {attr = "version.VERSION"}
 
 [tool.coverage.run]
 branch = true
-source = ["auto_trans", "version"]
+source = ["auto_trans", "auto_trans_yaml", "version"]
 
 [tool.coverage.report]
 show_missing = true

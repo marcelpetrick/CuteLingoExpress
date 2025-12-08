@@ -1,0 +1,193 @@
+# en_US.yaml
+
+# This is just a template for translating files.
+# "en_US" indicates that it is a translation from the original language (English) to American English (including all OSD UI text content).
+
+OSD Status Information:
+  Information: "Information"
+  FW Version: "Firmware version"
+  Calibration: "Calibration"
+  Serial Number: "Serial number"
+  Main source: "Main source"
+  Resolution: "Resolution"
+  Requency: "Requency"
+  Color Space: "Color space"
+  Settings: "Settings"
+  2nd source: "Second source"
+
+OSD Input menu:
+  Input: "Input"
+  HDMI 1: "HDMI 1"
+  HDMI 2: "HDMI 2"
+  Display Port: "Display Port"
+  SDI 1: "SDI 1"
+  SDI 2: "SDI 2"
+  Auto detection: "Auto detection"
+  2nd Source: "Second source"
+  3rd Source: "Third source"
+  Deselect: "Deselect"
+
+OSD Image Settings menu:
+  Image Settings: "Image settings"
+  Brightness: "Brightness"
+  Contrast: "Contrast"
+  Gamma: "Gamma"
+  Color: "Color"
+  Color Temperature: "Color temperature"
+  Color Space: "Color space"
+  # items below belong to 'Gamma' sub-menu
+  Auto: "Auto"
+  1.8: "1.8"
+  2.0: "2.0"
+  2.2: "2.2"
+  2.4: "2.4"
+  2.6: "2.6"
+  HLG: "HLG"
+  PQ: "PQ"
+  # items below belong to 'Color' sub-menu
+  Color tone: "Color tone"
+  Color saturation: "Color saturation"
+  Chroma: "Chroma"
+  Gain-Red: "Red gain"
+  Gain-Green: "Green gain"
+  Gain-Blue: "Blue gain"
+  Offset-Red: "Red offset"
+  Offset-Green: "Green offset"
+  Offset-Blue: "Blue offset"
+  # items below belong to 'Color Temperature' sub-menu
+  6500k: "6500k"
+  9300k: "9300k"
+  Native: "Native"
+  Custom: "Custom"
+  # items below belong to 'Color Space' sub-menu
+  BT.709: "BT.709"
+  sRGB: "sRGB"
+  BT.2020: "BT.2020"
+
+OSD Image Mode menu:
+  Image mode: "Image mode"
+  Scaling: "Scaling"
+  PiP: "Picture in picture"
+  PaP: "Picture and picture"
+  Rotation: "Rotation"
+  # items below belong to 'Scaling' sub-menu
+  Native: "Native"
+  Zoom: "Zoom"
+  Aspect ratio: "Aspect ratio"
+  Auto adjustment: "Auto adjustment"
+  # items below belong to 'PiP' sub-menu
+  On/Off: "On/Off"
+  2nd Source: "Second source"
+  3rd Source: "Third source"
+  Dual: "Dual"
+  Tripple: "Tripple"
+  Position: "Position"
+  Size: "Size"
+  Swap: "Swap"
+  Right: "Right"
+  Left: "Left"
+  Right above: "Right above"
+  Right below: "Right below"
+  Left above: "Left above"
+  Left below: "Left below"
+  # 'PaP' sub-menu texts is the same with PiP sub-menu, not need to translate again.
+  # items below belong to 'Rotation' sub-menu
+  Normal: "Normal"
+  180°: "180°"
+  Mirror horizontally: "Mirror horizontally"
+  Mirror vertically: "Mirror vertically"
+
+OSD Settings menu:
+  Factory settings: "Factory settings"
+  Device Information: "Device information"
+  Backlight: "Backlight"
+  Language: "Language"
+  OSD Position: "OSD position"
+  Function keys: "Function keys"
+  # items below belong to 'Factory settings' sub-menu
+  Yes: "Yes"
+  No: "No"
+  # items below belong to 'Device Information' sub-menu
+  Serial number: "Serial number"
+  Firmware: "Firmware"
+  Software: "Software"
+  # items below belong to 'Backlight' sub-menu
+  FALD On/Off: "FALD On/Off"
+  FALD 0-100%: "FALD 0-100%"
+  FALD Modus-1: "FALD Modus-1"
+  FALD Modus-2: "FALD Modus-2"
+  FALD Custom: "FALD Custom"
+  Energy saving: "Energy saving"
+  Ambient light sensor: "Ambient light sensor"
+  # items below belong to 'Language' sub-menu
+  English: "English"
+  German: "German"
+    # Here should include translations that require support for other languages, such as <Italian: "Italian">
+  # items below belong to 'OSD Position' sub-menu
+  bottom right: "bottom right"
+  top right: "top right"
+  bottom left: "bottom left"
+  top left: "top left"
+  # items below belong to 'Function keys' sub-menu
+  F1: "F1"
+  F2: "F2"
+  F3: "F3"
+  F4: "F4"
+  Preset 1: "Preset 1"
+  Preset 2: "Preset 2"
+  Preset 3: "Preset 3"
+  Preset 4: "Preset 4"
+  Preset 5: "Preset 5"
+  User 1: "User 1"
+  User 2: "User 2"
+  User 3: "User 3"
+  User 4: "User 4"
+  User 5: "User 5"
+  Swap(PiP or PaP): "Swap(PiP or PaP)"
+  Input-Toggle: "Input toggle"
+  Input: "Input"
+
+OSD User Settings menu:
+  Preset 1: "Preset 1"
+  Preset 2: "Preset 2"
+  Preset 3: "Preset 3"
+  Preset 4: "Preset 4"
+  Preset 5: "Preset 5"
+  User 1: "User 1"
+  User 2: "User 2"
+  User 3: "User 3"
+  User 4: "User 4"
+  User 5: "User 5"
+  Default settings: "Default settings"
+  # items below belong to 'User 1-5' sub-menu
+  Save current settings: "Save current settings"
+  Enable Settings: "Enable settings"
+  Rename User: "Rename user"
+
+OSD Licenses:
+  Licenses: "Licenses"
+
+OSD Service:
+  Hour counter: "Hour counter"
+  Error code: "Error code"
+  Export settings: "Export settings"
+  Import settings: "Import settings"
+  Serial control: "Serial control"
+  Calibration: "Calibration"
+  # items below belong to 'Calibration' sub-menu
+  Start: "Start"
+  View protocol: "View protocol"
+  Save protocol: "Save protocol"
+  # items below belong to 'Hour counter' sub-menu
+  hours: "hours"
+  minutes: "minutes"
+  # items below belong to 'Serial control' sub-menu
+  RS232: "RS232"
+  Baudrate 9600 bps: "Baudrate 9600 bps"
+  Baudrate 19200 bps: "Baudrate 19200 bps"
+  Ethernet: "Ethernet"
+  IP Address: "IP address"
+  Subnet Mask: "Subnet Mask"
+  Default Gateway: "Default gateway"
+  USB: "USB"
+  Baudrate 115200 bps: "Baudrate 115200 bps"
