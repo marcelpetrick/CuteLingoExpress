@@ -200,6 +200,8 @@ def get_help_text() -> str:
         "Translate unfinished entries in a Qt .ts file in place.\n"
         "\n"
         "Usage: python auto_trans.py <ts_file_path> [source_language] [target_language]\n"
+        "       python auto_trans.py --lvgl-yaml <yaml_file> <source_language> "
+        "<target_language>\n"
         "\n"
         "Languages are read from Qt TS metadata or the filename when omitted.\n"
         "The source falls back to automatic detection.\n"
@@ -207,6 +209,7 @@ def get_help_text() -> str:
         "Examples:\n"
         "  python auto_trans.py translations/app_de.ts\n"
         "  python auto_trans.py testing/helloworld.ts en cn\n"
+        "  python auto_trans.py --lvgl-yaml translations/osd_en.yaml en de\n"
         "  python auto_trans.py --help\n"
     )
 
@@ -479,6 +482,19 @@ def main():
 
     if len(sys.argv) == 1 or (len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}):
         print(get_help_text())
+        return
+
+    if len(sys.argv) >= 2 and sys.argv[1] == '--lvgl-yaml':
+        if len(sys.argv) != 5:
+            print(get_help_text())
+            return
+        yaml_translation = importlib.import_module('auto_trans_yaml')
+        output_path = yaml_translation.translate_yaml_file(
+            sys.argv[2],
+            sys.argv[3],
+            sys.argv[4],
+        )
+        print(f"LVGL YAML translation written to: {output_path}")
         return
 
     if len(sys.argv) > 4:

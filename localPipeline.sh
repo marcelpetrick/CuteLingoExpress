@@ -36,7 +36,7 @@ Usage: ./localPipeline.sh [--noRun]
 Local project pipeline:
   1. Create or reuse .venv
   2. Verify that .venv uses Python 3.12 or newer
-  3. Install the project with development dependencies from pyproject.toml
+  3. Install the project with development and optional YAML dependencies
   4. Verify the installed runtime command
   5. Run Pylint static analysis
   6. Run unittest with coverage and generate htmlcov/index.html
@@ -175,7 +175,7 @@ verify_python_version() {
 
 install_development_dependencies() {
     log "Installing project with development dependencies."
-    "${PYTHON}" -m pip install -e ".[dev]"
+    "${PYTHON}" -m pip install -e ".[dev,yaml]"
 }
 
 verify_runtime_version() {
@@ -196,7 +196,8 @@ run_pylint() {
     log "Running Pylint static analysis."
     local log_path="${PIPELINE_LOG_DIR}/pylint.log"
 
-    if run_with_log "${log_path}" "${PYTHON}" -m pylint auto_trans.py test_auto_trans.py version.py; then
+    if run_with_log "${log_path}" "${PYTHON}" -m pylint \
+        auto_trans.py auto_trans_yaml.py test_auto_trans.py test_auto_trans_yaml.py version.py; then
         PYLINT_DETAILS="$(extract_pylint_details "${log_path}")"
         return 0
     fi

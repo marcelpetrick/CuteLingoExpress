@@ -176,6 +176,7 @@ class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public
         )
         self.assertIn("Languages are read from Qt TS metadata", help_text)
         self.assertIn("python auto_trans.py testing/helloworld.ts en cn", help_text)
+        self.assertIn("--lvgl-yaml <yaml_file>", help_text)
 
     def test_normalize_qt_language_preserves_supported_locale_variants(self):
         """
@@ -778,6 +779,37 @@ class CliTests(unittest.TestCase):
         """
         Test that excess positional arguments are rejected with usage details.
         """
+        auto_trans.main()
+
+        self.assertEqual(
+            mock_print.call_args_list,
+            [call(get_startup_banner()), call(auto_trans.get_help_text())],
+        )
+
+    @patch("auto_trans_yaml.translate_yaml_file", return_value=Path("osd_en_de.yaml"))
+    @patch("sys.argv", ["auto_trans.py", "--lvgl-yaml", "osd_en.yaml", "en", "de"])
+    @patch("builtins.print")
+    def test_main_dispatches_optional_lvgl_yaml_mode(
+        self,
+        mock_print,
+        mock_translate_yaml_file,
+    ):
+        """The explicit YAML flag should dispatch through the application command."""
+        auto_trans.main()
+
+        mock_translate_yaml_file.assert_called_once_with("osd_en.yaml", "en", "de")
+        self.assertEqual(
+            mock_print.call_args_list,
+            [
+                call(get_startup_banner()),
+                call("LVGL YAML translation written to: osd_en_de.yaml"),
+            ],
+        )
+
+    @patch("sys.argv", ["auto_trans.py", "--lvgl-yaml", "osd_en.yaml"])
+    @patch("builtins.print")
+    def test_main_rejects_incomplete_lvgl_yaml_mode(self, mock_print):
+        """Incomplete YAML invocations should print the shared application help."""
         auto_trans.main()
 
         self.assertEqual(
