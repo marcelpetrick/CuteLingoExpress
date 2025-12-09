@@ -47,3 +47,33 @@ Whole execution took 3.1223082542419434s.
 # Naming?
 * The name "CuteLingoExpress" combines elements from different aspects of the tool to convey its purpose and characteristics. It blends "cute" from Qt, "lingo" representing the language translation aspect, and "express" to emphasize the tool's speed and efficiency in translating Qt content. This name reflects the tool's goal of delivering delightful and rapid translations while capturing the essence of the Qt framework.
 * The development of CuteLingoExpress involved applying design-thinking methodologies, leveraging GPT to enhance the overall user experience and refine the translation workflow.
+
+
+--------------
+
+## for YAML files: check branch `mpe/update` 
+* call `python3 auto_trans_yaml.py Template-en_US.yaml en de`
+* output looks like this:
+```
+    ~/repos/CuteLingoExpress    mpe/update +1 !1 ?1  python3 auto_trans_yaml.py Template-en_US.yaml en de                                                                                                                                                ✔  CuteLingoExpress  
+Loading YAML: Template-en_US.yaml
+Translating YAML content...
+translateString: 1.916s : Information -> Information
+translateString: 0.966s : Firmware version -> Firmware-Version
+translateString: 0.268s : Calibration -> Kalibrierung
+translateString: 0.193s : Serial number -> Seriennummer
+translateString: 0.743s : Main source -> Hauptquelle
+translateString: 0.060s : Resolution -> Auflösung
+translateString: 0.145s : Requency -> Frequenz
+translateString: 1.193s : Color space -> Farbraum
+translateString: 0.060s : Settings -> Einstellungen
+translateString: 0.511s : Second source -> Zweite Quelle
+translateString: 0.055s : Input -> Eingang
+translateString: 0.655s : HDMI 1 -> HDMI 1
+translateString: 0.750s : HDMI 2 -> HDMI 2
+translateString: 1.198s : Display Port -> Display-Port
+translateString: 1.069s : SDI 1 -> SDI 1
+translateString: 0.877s : SDI 2 -> SDI 2
+..
+```
+
