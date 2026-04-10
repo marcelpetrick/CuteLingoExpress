@@ -7,11 +7,38 @@ updating the file with the new translations.
 import sys
 import time
 import xml.etree.ElementTree
+from contextlib import contextmanager
 
 from cutelingoexpress_version import VERSION, get_startup_banner
 
 
 __version__ = VERSION
+
+
+@contextmanager
+def preserve_xml_text_quotes():
+    """
+    Temporarily configure ElementTree to serialize double quotes in text nodes
+    as ``&quot;`` so Qt TS files keep their original escaping style.
+    """
+    original_escape_cdata = xml.etree.ElementTree._escape_cdata
+
+    def escape_cdata_with_quotes(text):
+        return original_escape_cdata(text).replace('"', '&quot;')
+
+    xml.etree.ElementTree._escape_cdata = escape_cdata_with_quotes
+    try:
+        yield
+    finally:
+        xml.etree.ElementTree._escape_cdata = original_escape_cdata
+
+
+def write_ts_tree(tree, ts_file_path):
+    """
+    Write a Qt TS file while preserving ``&quot;`` in text content to avoid noisy diffs.
+    """
+    with preserve_xml_text_quotes():
+        tree.write(ts_file_path, encoding='utf-8', xml_declaration=True)
 
 
 def replace_first_lines(file_path):
@@ -94,7 +121,7 @@ def transform_ts_file(ts_file_path, _language, target_language):
                 translation.text = translated_text
                 del translation.attrib['type']
 
-    tree.write(ts_file_path, encoding='utf-8', xml_declaration=True)
+    write_ts_tree(tree, ts_file_path)
     replace_first_lines(ts_file_path)  # Replace the first two lines of the output file
     with open(ts_file_path, 'a', encoding='utf-8') as file:  # Preserve the last empty line
         file.write('\n')
