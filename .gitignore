@@ -160,3 +160,5 @@ cython_debug/
 #.idea/
 /.idea/
 /llm_compat_output.md
+/.codex
+/fakepath
