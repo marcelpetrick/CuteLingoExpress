@@ -4,6 +4,7 @@ These tests cover the functions replace_first_lines, translate_string and transf
 """
 
 import unittest
+import tempfile
 from unittest.mock import patch, MagicMock
 from xml.etree import ElementTree
 from types import SimpleNamespace
@@ -86,6 +87,29 @@ class AutoTransTest(unittest.TestCase):
         """
         auto_trans.main()
         mock_print.assert_called_once_with(get_startup_banner())
+
+    def test_write_ts_tree_preserves_quoted_entities_in_text(self):
+        """
+        Test that Qt HTML snippets keep ``&quot;`` instead of being normalized to ``"``.
+        """
+        tree = ElementTree.ElementTree(ElementTree.Element("TS"))
+        message = ElementTree.SubElement(tree.getroot(), "message")
+        source = ElementTree.SubElement(message, "source")
+        translation = ElementTree.SubElement(message, "translation")
+        html = (
+            '<html><body><p><span style=" font-weight:600;">%1 </span>'
+            'is requesting access</p></body></html>'
+        )
+        source.text = html
+        translation.text = html
+
+        with tempfile.NamedTemporaryFile("r+", encoding="utf-8", suffix=".ts") as temp_file:
+            auto_trans.write_ts_tree(tree, temp_file.name)
+            temp_file.seek(0)
+            written_content = temp_file.read()
+
+        self.assertIn("style=&quot; font-weight:600;&quot;", written_content)
+        self.assertNotIn('style=" font-weight:600;"', written_content)
 
 
 if __name__ == "__main__":
