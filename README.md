@@ -16,10 +16,12 @@ CuteLingoExpress is invoked by providing the path to the ts-file that needs tran
 ```shell
 python auto_trans.py testing/numerus.ts de cn
 python auto_trans.py testing/helloworld.ts en cn
+python auto_trans.py --version
 ```
 Upon execution, the tool will perform the translations and update the ts-file in-place. An example of the output could be as follows:    
 ```shell
 $ python auto_trans.py testing/helloworld.ts en cn
+CuteLingoExpress 0.1.0
 Using Germany server backend.
 translateString: 0.5832037925720215s : Hello world! -> 你好世界！ (en -> cn)
 translateString: 1.0015525817871094s : My first dish. -> 我的第一道菜。 (en -> cn)
@@ -27,6 +29,15 @@ translateString: 1.534256935119629s : white bread with butter -> 白面包和黄
 TS file transformed successfully.
 Whole execution took 3.1223082542419434s.
 ```
+
+## Versioning
+CuteLingoExpress  follows Semantic Versioning (`MAJOR.MINOR.PATCH`).
+
+The version is actively used across the lifecycle:
+* The single source of truth is [`cutelingoexpress_version.py`](cutelingoexpress_version.py).
+* Runtime code imports that version and prints it as the very first console output on startup.
+* Build metadata reads the same value through [`pyproject.toml`](pyproject.toml), so packaging and runtime stay aligned.
+* `python auto_trans.py --version` provides a lightweight way to surface the current release during debugging and support.
 
 ## Handling errors
 * Sometimes, the chosen backend for translation, Google, may fail to start in approximately 20% of the runs. If this occurs, you can press Ctrl+C to stop the execution and retry the translation.

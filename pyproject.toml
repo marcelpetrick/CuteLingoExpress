@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cutelingoexpress"
+dynamic = ["version"]
+description = "Translate Qt TS files and preserve structure for review."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+  "translators==5.3.1",
+]
+
+[tool.setuptools]
+py-modules = ["auto_trans", "cutelingoexpress_version"]
+
+[tool.setuptools.dynamic]
+version = {attr = "cutelingoexpress_version.VERSION"}

@@ -7,7 +7,11 @@ updating the file with the new translations.
 import sys
 import time
 import xml.etree.ElementTree
-import translators
+
+from cutelingoexpress_version import VERSION, get_startup_banner
+
+
+__version__ = VERSION
 
 
 def replace_first_lines(file_path):
@@ -40,6 +44,8 @@ def translate_string(source_string: str, source_language: str, target_language: 
     :return: The translated string.
     :rtype: str
     """
+    import translators
+
     start_time = time.time()
     output = translators.google(source_string, source_language, target_language)
     print(
@@ -101,6 +107,11 @@ def main():
     The main entry point of the script. It checks if a file path was given as
     command line argument and if so, calls the function to transform the .ts file.
     """
+    print(get_startup_banner())
+
+    if len(sys.argv) == 2 and sys.argv[1] in {"--version", "-V"}:
+        return
+
     if len(sys.argv) < 4:
         print("Usage: python script.py <ts_file_path> sourceLanguage targetLanguage")
         return

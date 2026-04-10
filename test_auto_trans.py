@@ -6,8 +6,10 @@ These tests cover the functions replace_first_lines, translate_string and transf
 import unittest
 from unittest.mock import patch, MagicMock
 from xml.etree import ElementTree
+from types import SimpleNamespace
 
 import auto_trans
+from cutelingoexpress_version import VERSION, get_startup_banner
 
 
 class AutoTransTest(unittest.TestCase):
@@ -28,13 +30,16 @@ class AutoTransTest(unittest.TestCase):
         auto_trans.replace_first_lines("fakepath")
         mock_open.assert_called_with("fakepath", 'r+', encoding='utf-8')
 
-    @patch("translators.google", return_value="你好世界")
-    def test_translate_string(self, mock_google):
+    def test_translate_string(self):
         """
         Test that translate_string calls the appropriate translation function
         and returns the correct result.
         """
-        result = auto_trans.translate_string("Hello world", "en", "cn")
+        mock_google = MagicMock(return_value="你好世界")
+
+        with patch.dict("sys.modules", {"translators": SimpleNamespace(google=mock_google)}):
+            result = auto_trans.translate_string("Hello world", "en", "cn")
+
         self.assertEqual(result, "你好世界")
         mock_google.assert_called_once_with("Hello world", "en", "cn")
 
@@ -60,6 +65,27 @@ class AutoTransTest(unittest.TestCase):
         mock_replace_first_lines.assert_called_once_with("fakepath")
         self.assertIsNone(fake_translation.attrib.get('type'))
         self.assertEqual(fake_translation.text, "你好世界")
+
+    def test_version_is_semver(self):
+        """
+        Test that the central application version follows semantic versioning.
+        """
+        self.assertRegex(VERSION, r"^\d+\.\d+\.\d+$")
+
+    def test_startup_banner_contains_version(self):
+        """
+        Test that the startup banner surfaces the configured version.
+        """
+        self.assertEqual(get_startup_banner(), f"CuteLingoExpress {VERSION}")
+
+    @patch("sys.argv", ["auto_trans.py", "--version"])
+    @patch("builtins.print")
+    def test_main_prints_version_banner_first(self, mock_print):
+        """
+        Test that startup prints the application version before doing anything else.
+        """
+        auto_trans.main()
+        mock_print.assert_called_once_with(get_startup_banner())
 
 
 if __name__ == "__main__":
