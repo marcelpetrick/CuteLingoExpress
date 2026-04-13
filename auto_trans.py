@@ -5,28 +5,41 @@ updating the file with the new translations.
 """
 
 import sys
+import re
 import time
 import xml.etree.ElementTree
 from contextlib import contextmanager
+from xml.sax.saxutils import escape
 
 from cutelingoexpress_version import VERSION, get_startup_banner
 
 
 __version__ = VERSION
 
+MESSAGE_PATTERN = re.compile(r'(<message\b[^>]*>.*?</message>)', re.DOTALL)
+SOURCE_PATTERN = re.compile(r'<source>(.*?)</source>', re.DOTALL)
+TRANSLATION_PATTERN = re.compile(
+    r'(?P<indent>^[ \t]*)<translation\b(?P<attrs>[^>]*?)(?P<self_closing>\s*/>|>(?P<inner>.*?)</translation>)',
+    re.DOTALL | re.MULTILINE,
+)
+
 
 @contextmanager
-def preserve_xml_text_quotes():
+def preserve_xml_text_entities():
     """
-    Temporarily configure ElementTree to serialize double quotes in text nodes
-    as ``&quot;`` so Qt TS files keep their original escaping style.
+    Temporarily configure ElementTree to serialize quote characters in text
+    nodes as XML entities so Qt TS files keep their original escaping style.
     """
     original_escape_cdata = xml.etree.ElementTree._escape_cdata
 
-    def escape_cdata_with_quotes(text):
-        return original_escape_cdata(text).replace('"', '&quot;')
+    def escape_cdata_with_entities(text):
+        return (
+            original_escape_cdata(text)
+            .replace('"', '&quot;')
+            .replace("'", '&apos;')
+        )
 
-    xml.etree.ElementTree._escape_cdata = escape_cdata_with_quotes
+    xml.etree.ElementTree._escape_cdata = escape_cdata_with_entities
     try:
         yield
     finally:
@@ -35,10 +48,119 @@ def preserve_xml_text_quotes():
 
 def write_ts_tree(tree, ts_file_path):
     """
-    Write a Qt TS file while preserving ``&quot;`` in text content to avoid noisy diffs.
+    Write a Qt TS file while preserving quote entities in text content to avoid
+    noisy diffs.
     """
-    with preserve_xml_text_quotes():
+    with preserve_xml_text_entities():
         tree.write(ts_file_path, encoding='utf-8', xml_declaration=True)
+
+
+def escape_ts_text(text, preserve_double_quotes=False, preserve_single_quotes=False):
+    """
+    Escape translated TS text while optionally matching the entity style seen in
+    the original source string.
+    """
+    entity_map = {}
+    if preserve_double_quotes:
+        entity_map['"'] = '&quot;'
+    if preserve_single_quotes:
+        entity_map["'"] = '&apos;'
+    return escape(text, entity_map)
+
+
+def remove_unfinished_type(attributes_text):
+    """
+    Remove the ``type="unfinished"`` attribute while preserving any other
+    translation attributes.
+    """
+    updated_attributes = re.sub(r'\s+type="unfinished"', '', attributes_text)
+    updated_attributes = re.sub(r'\s+', ' ', updated_attributes).strip()
+    return f' {updated_attributes}' if updated_attributes else ''
+
+
+def replace_translation_in_message(message_block, translated_text, numerus):
+    """
+    Replace the unfinished translation inside a single message block while
+    leaving all unrelated XML untouched.
+    """
+    source_match = SOURCE_PATTERN.search(message_block)
+    translation_match = TRANSLATION_PATTERN.search(message_block)
+    if source_match is None or translation_match is None:
+        raise ValueError("Unable to locate source or translation block in TS message.")
+
+    source_raw = source_match.group(1)
+    translation_indent = translation_match.group('indent')
+    updated_attributes = remove_unfinished_type(translation_match.group('attrs'))
+    inner_content = translation_match.group('inner') or ""
+
+    escaped_translation = escape_ts_text(
+        translated_text,
+        preserve_double_quotes='&quot;' in source_raw,
+        preserve_single_quotes='&apos;' in source_raw,
+    )
+
+    if numerus:
+        numerusform_indent_match = re.search(
+            r'^[ \t]*(?=<numerusform>)',
+            inner_content,
+            re.MULTILINE,
+        )
+        numerusform_indent = (
+            numerusform_indent_match.group(0)
+            if numerusform_indent_match is not None
+            else f"{translation_indent}    "
+        )
+        replacement = (
+            f"{translation_indent}<translation{updated_attributes}>\n"
+            f"{numerusform_indent}<numerusform>{escaped_translation}</numerusform>\n"
+            f"{numerusform_indent}<numerusform>{escaped_translation}</numerusform>\n"
+            f"{translation_indent}</translation>"
+        )
+    else:
+        replacement = (
+            f"{translation_indent}<translation{updated_attributes}>"
+            f"{escaped_translation}</translation>"
+        )
+
+    return (
+        message_block[:translation_match.start()]
+        + replacement
+        + message_block[translation_match.end():]
+    )
+
+
+def update_ts_content(original_content, translated_messages):
+    """
+    Apply translation updates to the original TS file content without
+    reserializing untouched XML.
+    """
+    updated_parts = []
+    last_index = 0
+    message_matches = list(MESSAGE_PATTERN.finditer(original_content))
+
+    if len(message_matches) != len(translated_messages):
+        raise ValueError("TS message count changed while processing the file.")
+
+    for message_match, message_update in zip(message_matches, translated_messages):
+        updated_parts.append(original_content[last_index:message_match.start()])
+        message_block = message_match.group(1)
+
+        if message_update is None:
+            updated_parts.append(message_block)
+        else:
+            updated_parts.append(
+                replace_translation_in_message(
+                    message_block,
+                    message_update['translated_text'],
+                    message_update['numerus'],
+                )
+            )
+
+        last_index = message_match.end()
+
+    updated_parts.append(original_content[last_index:])
+    updated_content = ''.join(updated_parts)
+    return updated_content if updated_content.endswith('\n') else f"{updated_content}\n"
 
 
 def get_help_text() -> str:
@@ -110,8 +232,12 @@ def transform_ts_file(ts_file_path, _language, target_language):
     :param target_language: The ISO 639-1 code of the target language.
     :type target_language: str
     """
+    with open(ts_file_path, 'r', encoding='utf-8') as file:
+        original_content = file.read()
+
     tree = xml.etree.ElementTree.parse(ts_file_path)
     root = tree.getroot()
+    translated_messages = []
 
     for message in root.iter('message'):
         numerus = message.attrib.get('numerus') == 'yes'
@@ -121,25 +247,27 @@ def transform_ts_file(ts_file_path, _language, target_language):
             if unfinished_translation is not None and \
                     unfinished_translation.attrib.get('type') == 'unfinished':
                 translated_text = translate_string(source_text, _language, target_language)
-                for num_form in unfinished_translation.findall('numerusform'):
-                    unfinished_translation.remove(num_form)  # Remove existing empty numerusforms
-                for _ in range(2):  # assuming two forms, singular and plural
-                    new_numerusform = xml.etree.ElementTree.SubElement(unfinished_translation,
-                                                                       'numerusform')
-                    new_numerusform.text = translated_text
-                del unfinished_translation.attrib['type']
+                translated_messages.append({
+                    'translated_text': translated_text,
+                    'numerus': True,
+                })
+            else:
+                translated_messages.append(None)
         else:
             translation = message.find('translation')
             if translation is not None and translation.attrib.get('type') == 'unfinished':
                 source_text = message.find('source').text
                 translated_text = translate_string(source_text, _language, target_language)
-                translation.text = translated_text
-                del translation.attrib['type']
+                translated_messages.append({
+                    'translated_text': translated_text,
+                    'numerus': False,
+                })
+            else:
+                translated_messages.append(None)
 
-    write_ts_tree(tree, ts_file_path)
-    replace_first_lines(ts_file_path)  # Replace the first two lines of the output file
-    with open(ts_file_path, 'a', encoding='utf-8') as file:  # Preserve the last empty line
-        file.write('\n')
+    updated_content = update_ts_content(original_content, translated_messages)
+    with open(ts_file_path, 'w', encoding='utf-8') as file:
+        file.write(updated_content)
 
     print("TS file transformed successfully.")
 

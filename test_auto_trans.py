@@ -5,10 +5,12 @@ These tests cover the functions replace_first_lines, translate_string and transf
 
 import unittest
 import tempfile
+import shutil
 from unittest.mock import patch, MagicMock
 from xml.etree import ElementTree
 from types import SimpleNamespace
 from unittest.mock import call
+from pathlib import Path
 
 import auto_trans
 from cutelingoexpress_version import VERSION, get_startup_banner
@@ -45,28 +47,33 @@ class AutoTransTest(unittest.TestCase):
         self.assertEqual(result, "你好世界")
         mock_google.assert_called_once_with("Hello world", "en", "cn")
 
-    @patch("xml.etree.ElementTree.parse")
     @patch("auto_trans.translate_string", return_value="你好世界")
-    @patch("auto_trans.replace_first_lines")
-    def test_transform_ts_file(self, mock_replace_first_lines, mock_translate_string, mock_parse):
+    def test_transform_ts_file(self, mock_translate_string):
         """
         Test that transform_ts_file updates a .ts file correctly.
         """
-        fake_tree = ElementTree.ElementTree(ElementTree.Element("TS"))
-        fake_msg = ElementTree.Element("message")
-        fake_source = ElementTree.Element("source")
-        fake_source.text = "Hello world"
-        fake_translation = ElementTree.Element("translation", attrib={"type": "unfinished"})
-        fake_msg.extend([fake_source, fake_translation])
-        fake_tree.getroot().append(fake_msg)
-        mock_parse.return_value = fake_tree
-
-        auto_trans.transform_ts_file("fakepath", "en", "cn")
+        content = """<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1" language="de_DE">
+<context>
+    <name>QPushButton</name>
+    <message>
+        <source>Hello world</source>
+        <translation type="unfinished"/>
+    </message>
+</context>
+</TS>
+"""
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix=".ts") as temp_file:
+            temp_file.write(content)
+            temp_file.flush()
+            auto_trans.transform_ts_file(temp_file.name, "en", "cn")
+            temp_file.seek(0)
+            written_content = temp_file.read()
 
         mock_translate_string.assert_called_once_with("Hello world", "en", "cn")
-        mock_replace_first_lines.assert_called_once_with("fakepath")
-        self.assertIsNone(fake_translation.attrib.get('type'))
-        self.assertEqual(fake_translation.text, "你好世界")
+        self.assertIn("<translation>你好世界</translation>", written_content)
+        self.assertNotIn('type="unfinished"', written_content)
 
     def test_version_is_semver(self):
         """
@@ -121,6 +128,120 @@ class AutoTransTest(unittest.TestCase):
 
         self.assertIn("style=&quot; font-weight:600;&quot;", written_content)
         self.assertNotIn('style=" font-weight:600;"', written_content)
+
+    def test_write_ts_tree_preserves_apostrophe_entities_in_text(self):
+        """
+        Test that apostrophes stay encoded as ``&apos;`` in Qt TS text content.
+        """
+        tree = ElementTree.ElementTree(ElementTree.Element("TS"))
+        message = ElementTree.SubElement(tree.getroot(), "message")
+        source = ElementTree.SubElement(message, "source")
+        translation = ElementTree.SubElement(message, "translation")
+        text = 'Entry\'s "%1" attribute copied to the clipboard!'
+        source.text = text
+        translation.text = text
+
+        with tempfile.NamedTemporaryFile("r+", encoding="utf-8", suffix=".ts") as temp_file:
+            auto_trans.write_ts_tree(tree, temp_file.name)
+            temp_file.seek(0)
+            written_content = temp_file.read()
+
+        self.assertIn("Entry&apos;s &quot;%1&quot; attribute copied to the clipboard!", written_content)
+        self.assertNotIn('Entry\'s "%1" attribute copied to the clipboard!', written_content)
+
+    @patch("auto_trans.translate_string", return_value='Er sagte "Hallo"')
+    def test_transform_ts_file_preserves_untouched_source_entities(self, mock_translate_string):
+        """
+        Test that untouched source strings keep their original entity spelling.
+        """
+        content = """<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1" language="de_DE">
+<context>
+    <name>Example</name>
+    <message>
+        <source>Don&apos;t expose this database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The attachment '%1' was modified.</source>
+        <translation>Existing translation</translation>
+    </message>
+</context>
+</TS>
+"""
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix=".ts") as temp_file:
+            temp_file.write(content)
+            temp_file.flush()
+            auto_trans.transform_ts_file(temp_file.name, "en", "de")
+            temp_file.seek(0)
+            written_content = temp_file.read()
+
+        mock_translate_string.assert_called_once_with("Don't expose this database", "en", "de")
+        self.assertIn("<source>Don&apos;t expose this database</source>", written_content)
+        self.assertNotIn("<source>Don't expose this database</source>", written_content)
+        self.assertIn("<source>The attachment '%1' was modified.</source>", written_content)
+        self.assertNotIn("&apos;%1&apos;", written_content)
+
+    @patch("auto_trans.translate_string", return_value='<html><span style=" font-weight:600;">Hallo</span></html>')
+    def test_transform_ts_file_matches_source_quote_style_for_new_translation(self, mock_translate_string):
+        """
+        Test that new translations reuse the entity style found in the source text.
+        """
+        content = """<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1" language="de_DE">
+<context>
+    <name>Example</name>
+    <message>
+        <source>&lt;html&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Hi&lt;/span&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+</TS>
+"""
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix=".ts") as temp_file:
+            temp_file.write(content)
+            temp_file.flush()
+            auto_trans.transform_ts_file(temp_file.name, "en", "de")
+            temp_file.seek(0)
+            written_content = temp_file.read()
+
+        mock_translate_string.assert_called_once_with('<html><span style=" font-weight:600;">Hi</span></html>', "en", "de")
+        self.assertIn("&lt;html&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Hallo&lt;/span&gt;&lt;/html&gt;", written_content)
+
+    def test_keepassxc_fixture_contains_mixed_quote_styles(self):
+        """
+        Test that the KeePassXC fixture covers both entity and literal apostrophe styles.
+        """
+        fixture_content = Path("testing/keepassxc_de.ts").read_text(encoding="utf-8")
+
+        self.assertIn("Entry&apos;s &quot;%1&quot; attribute copied to the clipboard!", fixture_content)
+        self.assertIn("The attachment '%1' was modified.", fixture_content)
+
+    @patch("auto_trans.translate_string", side_effect=lambda source, _src, _dst: f"TRANSLATED: {source}")
+    def test_transform_ts_file_preserves_keepassxc_fixture_quote_style(self, mock_translate_string):
+        """
+        Test that the real KeePassXC fixture can be transformed without mangling
+        apostrophes or quotes in untouched strings.
+        """
+        fixture_path = Path("testing/keepassxc_de.ts")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir) / fixture_path.name
+            shutil.copyfile(fixture_path, temp_path)
+
+            auto_trans.transform_ts_file(str(temp_path), "en", "de")
+            written_content = temp_path.read_text(encoding="utf-8")
+
+        self.assertEqual(mock_translate_string.call_count, 5)
+        self.assertIn("Entry&apos;s &quot;%1&quot; attribute copied to the clipboard!", written_content)
+        self.assertIn("The attachment '%1' was modified.", written_content)
+        self.assertNotIn("Entry's &quot;%1&quot; attribute copied to the clipboard!", written_content)
+        self.assertNotIn("The attachment &apos;%1&apos; was modified.", written_content)
+        self.assertIn("<translation>TRANSLATED: Auto-generate password for new entries</translation>", written_content)
+        self.assertIn("<translation>TRANSLATED: Failed to read string data: %1</translation>", written_content)
+        self.assertNotIn('type="unfinished"', written_content)
 
     @patch("sys.argv", ["auto_trans.py"])
     @patch("builtins.print")
