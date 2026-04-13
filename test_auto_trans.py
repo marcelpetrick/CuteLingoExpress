@@ -8,6 +8,7 @@ import tempfile
 from unittest.mock import patch, MagicMock
 from xml.etree import ElementTree
 from types import SimpleNamespace
+from unittest.mock import call
 
 import auto_trans
 from cutelingoexpress_version import VERSION, get_startup_banner
@@ -79,6 +80,16 @@ class AutoTransTest(unittest.TestCase):
         """
         self.assertEqual(get_startup_banner(), f"CuteLingoExpress {VERSION}")
 
+    def test_help_text_contains_description_and_example(self):
+        """
+        Test that the short help text includes a description and example usage.
+        """
+        help_text = auto_trans.get_help_text()
+
+        self.assertIn("Translate unfinished entries in a Qt .ts file in place.", help_text)
+        self.assertIn("Usage: python auto_trans.py", help_text)
+        self.assertIn("python auto_trans.py testing/helloworld.ts en cn", help_text)
+
     @patch("sys.argv", ["auto_trans.py", "--version"])
     @patch("builtins.print")
     def test_main_prints_version_banner_first(self, mock_print):
@@ -110,6 +121,32 @@ class AutoTransTest(unittest.TestCase):
 
         self.assertIn("style=&quot; font-weight:600;&quot;", written_content)
         self.assertNotIn('style=" font-weight:600;"', written_content)
+
+    @patch("sys.argv", ["auto_trans.py"])
+    @patch("builtins.print")
+    def test_main_prints_help_for_naked_invocation(self, mock_print):
+        """
+        Test that running without arguments prints the short help message.
+        """
+        auto_trans.main()
+
+        self.assertEqual(
+            mock_print.call_args_list,
+            [call(get_startup_banner()), call(auto_trans.get_help_text())]
+        )
+
+    @patch("sys.argv", ["auto_trans.py", "--help"])
+    @patch("builtins.print")
+    def test_main_prints_help_for_explicit_help_flag(self, mock_print):
+        """
+        Test that --help prints the same short help message.
+        """
+        auto_trans.main()
+
+        self.assertEqual(
+            mock_print.call_args_list,
+            [call(get_startup_banner()), call(auto_trans.get_help_text())]
+        )
 
 
 if __name__ == "__main__":

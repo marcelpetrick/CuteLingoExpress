@@ -41,6 +41,21 @@ def write_ts_tree(tree, ts_file_path):
         tree.write(ts_file_path, encoding='utf-8', xml_declaration=True)
 
 
+def get_help_text() -> str:
+    """
+    Return a concise help message for the command line interface.
+    """
+    return (
+        "Translate unfinished entries in a Qt .ts file in place.\n"
+        "\n"
+        "Usage: python auto_trans.py <ts_file_path> <source_language> <target_language>\n"
+        "\n"
+        "Examples:\n"
+        "  python auto_trans.py testing/helloworld.ts en cn\n"
+        "  python auto_trans.py --help\n"
+    )
+
+
 def replace_first_lines(file_path):
     """
     Replaces the first two lines of a file with the XML declaration and DOCTYPE.
@@ -139,8 +154,12 @@ def main():
     if len(sys.argv) == 2 and sys.argv[1] in {"--version", "-V"}:
         return
 
+    if len(sys.argv) == 1 or (len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}):
+        print(get_help_text())
+        return
+
     if len(sys.argv) < 4:
-        print("Usage: python script.py <ts_file_path> sourceLanguage targetLanguage")
+        print(get_help_text())
         return
 
     ts_file_path = sys.argv[1]
