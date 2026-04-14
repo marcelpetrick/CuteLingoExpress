@@ -11,7 +11,7 @@ import xml.etree.ElementTree
 from contextlib import contextmanager
 from xml.sax.saxutils import escape
 
-from cutelingoexpress_version import VERSION, get_startup_banner
+from version import VERSION, get_startup_banner
 
 
 __version__ = VERSION

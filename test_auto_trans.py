@@ -13,7 +13,7 @@ from unittest.mock import call
 from pathlib import Path
 
 import auto_trans
-from cutelingoexpress_version import VERSION, get_startup_banner
+from version import VERSION, get_startup_banner
 
 
 class AutoTransTest(unittest.TestCase):

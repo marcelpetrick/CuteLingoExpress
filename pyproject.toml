@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
-py-modules = ["auto_trans", "cutelingoexpress_version"]
+py-modules = ["auto_trans", "version"]
 
 [tool.setuptools.dynamic]
-version = {attr = "cutelingoexpress_version.VERSION"}
+version = {attr = "version.VERSION"}
