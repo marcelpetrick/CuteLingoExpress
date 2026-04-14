@@ -1,6 +1,9 @@
 # CuteLingoExpress
 CuteLingoExpress is a tool for translating Qt `.ts` files during internationalization work. It automates the translation process by letting you specify the source and target language and quickly preview how translated layouts will look. This is useful for checking whether an app's interface works well in another language before involving native speakers for final review.
 
+![](logo.png)  
+The logo consists of a cute (Qt..) snake (Python) circling a upper-case TS (symbolising the tanslation files).
+
 ## Motivation
 Internationalization plays a crucial role in developing successful applications, as not all customers are comfortable with English. Qt provides a comprehensive ecosystem for handling internationalization, including language support in C++/Qt and tools such as `lupdate` and Linguist. One thing that was missing was a quick way to automatically generate translations and review them in the context of an app's layouts. CuteLingoExpress fills that gap by automating the translation process and giving developers a convenient way to assess layout compatibility.
 
