@@ -1,6 +1,6 @@
 """
 Unit tests for auto_trans.py.
-These tests cover the functions replace_first_lines, translate_string and transform_ts_file.
+These tests cover the main helpers and command-line behavior.
 """
 
 import unittest
@@ -17,14 +17,7 @@ from version import VERSION, get_startup_banner
 
 
 class AutoTransTest(unittest.TestCase):
-    """
-    Test class for the auto_trans module.
-    """
-
-    def setUp(self):
-        """
-        Set up anything that is necessary for the test environment.
-        """
+    """Tests for the auto_trans module."""
 
     @patch("builtins.open", new_callable=MagicMock)
     def test_replace_first_lines(self, mock_open):

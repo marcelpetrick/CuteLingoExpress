@@ -1,27 +1,28 @@
 # CuteLingoExpress
-CuteLingoExpress is a powerful tool designed to facilitate the translation of Qt ts-files for internationalization. It automates the translation process by allowing users to specify the source and target language, providing a preview of how the translated layouts will appear. This tool is particularly useful for ensuring that the app's interface is well-suited for different languages before engaging native speakers for final translations, saving time in the development cycle.
+CuteLingoExpress is a tool for translating Qt `.ts` files during internationalization work. It automates the translation process by letting you specify the source and target language and quickly preview how translated layouts will look. This is useful for checking whether an app's interface works well in another language before involving native speakers for final review.
 
 ## Motivation
-Internationalization plays a crucial role in developing successful applications, as not all customers are comfortable with English. Qt provides a comprehensive ecosystem for handling internationalization, including language support in C++/Qt and various tools like lupdate and Linguist. However, one missing aspect has been the ability to automatically generate translations and preview them in the context of the app's layouts. CuteLingoExpress fills this gap by automating the translation process and providing developers with a quick and convenient way to assess layout compatibility.
+Internationalization plays a crucial role in developing successful applications, as not all customers are comfortable with English. Qt provides a comprehensive ecosystem for handling internationalization, including language support in C++/Qt and tools such as `lupdate` and Linguist. One thing that was missing was a quick way to automatically generate translations and review them in the context of an app's layouts. CuteLingoExpress fills that gap by automating the translation process and giving developers a convenient way to assess layout compatibility.
 
 # Usage
 
 ## Setup
-To use CuteLingoExpress, start by installing the required packages specified in 
-`pip install requirements.txt`  
-Please note that the tool currently supports the translators package version 5.3.1, as the newest version may not be compatible.
+To use CuteLingoExpress, install the required package with:
+`pip install -r requirements.txt`
+
+The project is currently pinned to `translators==5.3.1`.
 
 ## Invocation
-CuteLingoExpress is invoked by providing the path to the ts-file that needs translation and the ISO 639-1 country codes for the source and target languages. For more information about ISO 639-1 country codes, refer to the documentation available at https://pypi.org/project/translators/. The following examples demonstrate the usage:   
+CuteLingoExpress is invoked by providing the path to the `.ts` file that needs translation and the ISO 639-1 language codes for the source and target languages. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. The following examples demonstrate the usage:
 ```shell
 python auto_trans.py testing/numerus.ts de cn
 python auto_trans.py testing/helloworld.ts en cn
 python auto_trans.py --version
 ```
-Upon execution, the tool will perform the translations and update the ts-file in-place. An example of the output could be as follows:    
+Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
 ```shell
 $ python auto_trans.py testing/helloworld.ts en cn
-CuteLingoExpress 0.1.0
+CuteLingoExpress 0.1.4
 Using Germany server backend.
 translateString: 0.5832037925720215s : Hello world! -> 你好世界！ (en -> cn)
 translateString: 1.0015525817871094s : My first dish. -> 我的第一道菜。 (en -> cn)
@@ -41,10 +42,10 @@ The version is actively used across the lifecycle:
 
 ## Handling errors
 * Sometimes, the chosen backend for translation, Google, may fail to start in approximately 20% of the runs. If this occurs, you can press Ctrl+C to stop the execution and retry the translation.
-* Yandex and DeepL were also quite powerful, but I ran quickly into rate-limitations (watch the output).
+* Yandex and DeepL were also quite powerful, but I quickly ran into rate limits with them (watch the output).
 
 ## Checking results
-* To assess the translated content, it is recommended to use the diff command from your preferred version-control system. This allows you to compare the changes made in the ts-file and verify the accuracy of the translations.
+* To assess the translated content, it is recommended to use the diff command from your preferred version-control system. This allows you to compare the changes made in the `.ts` file and verify the accuracy of the translations.
 ![](comparison_cn.png)  
 
 ### Additional Features
@@ -52,9 +53,9 @@ The version is actively used across the lifecycle:
 * During development, a key goal was to preserve the original file structure to minimize the differences when comparing versions. This approach ensures that the changes made during translation are easily identifiable.
 
 ## Software quality
-* Please execute the tests in `test_auto_trans.py` to check for regressions.  
+* Please run the tests in `test_auto_trans.py` to check for regressions.
 * `pylint` gives it a rating of 10/10.
 
 # Naming?
 * The name "CuteLingoExpress" combines elements from different aspects of the tool to convey its purpose and characteristics. It blends "cute" from Qt, "lingo" representing the language translation aspect, and "express" to emphasize the tool's speed and efficiency in translating Qt content. This name reflects the tool's goal of delivering delightful and rapid translations while capturing the essence of the Qt framework.
-* The development of CuteLingoExpress involved applying design-thinking methodologies, leveraging GPT to enhance the overall user experience and refine the translation workflow.
+* The development of CuteLingoExpress involved applying design-thinking methods and using GPT to refine the translation workflow and overall user experience.
