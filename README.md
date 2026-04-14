@@ -31,10 +31,10 @@ Whole execution took 3.1223082542419434s.
 ```
 
 ## Versioning
-CuteLingoExpress  follows Semantic Versioning (`MAJOR.MINOR.PATCH`).
+CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
 The version is actively used across the lifecycle:
-* The single source of truth is [`cutelingoexpress_version.py`](cutelingoexpress_version.py).
+* The single source of truth is [`version.py`](version.py).
 * Runtime code imports that version and prints it as the very first console output on startup.
 * Build metadata reads the same value through [`pyproject.toml`](pyproject.toml), so packaging and runtime stay aligned.
 * `python auto_trans.py --version` provides a lightweight way to surface the current release during debugging and support.
