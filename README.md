@@ -56,6 +56,7 @@ The version is actively used across the lifecycle:
 * During development, a key goal was to preserve the original file structure to minimize the differences when comparing versions. This approach ensures that the changes made during translation are easily identifiable.
 
 ## Software quality
+### Unit testing
 * Please run the tests in `test_auto_trans.py` to check for regressions.
 * To generate coverage for the unit tests, install the development dependencies with `pip install -r requirements-dev.txt`.
 * Run `python -m coverage run -m unittest` to execute the full test suite with coverage collection.
@@ -70,7 +71,16 @@ version.py          5      1      0      0  80.00%   13
 ------------------------------------------------------------
 TOTAL             128     16     30      6  84.81%
 ```
+
+### Linting
 * `pylint` gives it a rating of 10/10.
+* Run `python -m pylint auto_trans.py test_auto_trans.py version.py` to lint the Python modules.
+```sh
+python -m pylint auto_trans.py test_auto_trans.py version.py 
+
+-------------------------------------------------------------------
+Your code has been rated at 10.00/10 (previous run: 9.31/10, +0.69)
+```
 
 # Naming?
 * The name "CuteLingoExpress" combines elements from different aspects of the tool to convey its purpose and characteristics. It blends "cute" from Qt, "lingo" representing the language translation aspect, and "express" to emphasize the tool's speed and efficiency in translating Qt content. This name reflects the tool's goal of delivering delightful and rapid translations while capturing the essence of the Qt framework.

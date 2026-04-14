@@ -3,14 +3,13 @@ Unit tests for auto_trans.py.
 These tests cover the main helpers and command-line behavior.
 """
 
-import unittest
-import tempfile
 import shutil
-from unittest.mock import patch, MagicMock
-from xml.etree import ElementTree
+import tempfile
+import unittest
 from types import SimpleNamespace
-from unittest.mock import call
 from pathlib import Path
+from unittest.mock import MagicMock, call, patch
+from xml.etree import ElementTree
 
 import auto_trans
 from version import VERSION, get_startup_banner
@@ -139,7 +138,10 @@ class AutoTransTest(unittest.TestCase):
             temp_file.seek(0)
             written_content = temp_file.read()
 
-        self.assertIn("Entry&apos;s &quot;%1&quot; attribute copied to the clipboard!", written_content)
+        self.assertIn(
+            "Entry&apos;s &quot;%1&quot; attribute copied to the clipboard!",
+            written_content,
+        )
         self.assertNotIn('Entry\'s "%1" attribute copied to the clipboard!', written_content)
 
     @patch("auto_trans.translate_string", return_value='Er sagte "Hallo"')
@@ -176,8 +178,14 @@ class AutoTransTest(unittest.TestCase):
         self.assertIn("<source>The attachment '%1' was modified.</source>", written_content)
         self.assertNotIn("&apos;%1&apos;", written_content)
 
-    @patch("auto_trans.translate_string", return_value='<html><span style=" font-weight:600;">Hallo</span></html>')
-    def test_transform_ts_file_matches_source_quote_style_for_new_translation(self, mock_translate_string):
+    @patch(
+        "auto_trans.translate_string",
+        return_value='<html><span style=" font-weight:600;">Hallo</span></html>',
+    )
+    def test_transform_ts_file_matches_source_quote_style_for_new_translation(
+        self,
+        mock_translate_string,
+    ):
         """
         Test that new translations reuse the entity style found in the source text.
         """
@@ -200,8 +208,18 @@ class AutoTransTest(unittest.TestCase):
             temp_file.seek(0)
             written_content = temp_file.read()
 
-        mock_translate_string.assert_called_once_with('<html><span style=" font-weight:600;">Hi</span></html>', "en", "de")
-        self.assertIn("&lt;html&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Hallo&lt;/span&gt;&lt;/html&gt;", written_content)
+        mock_translate_string.assert_called_once_with(
+            '<html><span style=" font-weight:600;">Hi</span></html>',
+            "en",
+            "de",
+        )
+        self.assertIn(
+            (
+                "&lt;html&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;"
+                "Hallo&lt;/span&gt;&lt;/html&gt;"
+            ),
+            written_content,
+        )
 
     def test_keepassxc_fixture_contains_mixed_quote_styles(self):
         """
@@ -209,11 +227,20 @@ class AutoTransTest(unittest.TestCase):
         """
         fixture_content = Path("testing/keepassxc_de.ts").read_text(encoding="utf-8")
 
-        self.assertIn("Entry&apos;s &quot;%1&quot; attribute copied to the clipboard!", fixture_content)
+        self.assertIn(
+            "Entry&apos;s &quot;%1&quot; attribute copied to the clipboard!",
+            fixture_content,
+        )
         self.assertIn("The attachment '%1' was modified.", fixture_content)
 
-    @patch("auto_trans.translate_string", side_effect=lambda source, _src, _dst: f"TRANSLATED: {source}")
-    def test_transform_ts_file_preserves_keepassxc_fixture_quote_style(self, mock_translate_string):
+    @patch(
+        "auto_trans.translate_string",
+        side_effect=lambda source, _src, _dst: f"TRANSLATED: {source}",
+    )
+    def test_transform_ts_file_preserves_keepassxc_fixture_quote_style(
+        self,
+        mock_translate_string,
+    ):
         """
         Test that the real KeePassXC fixture can be transformed without mangling
         apostrophes or quotes in untouched strings.
@@ -228,12 +255,24 @@ class AutoTransTest(unittest.TestCase):
             written_content = temp_path.read_text(encoding="utf-8")
 
         self.assertEqual(mock_translate_string.call_count, 5)
-        self.assertIn("Entry&apos;s &quot;%1&quot; attribute copied to the clipboard!", written_content)
+        self.assertIn(
+            "Entry&apos;s &quot;%1&quot; attribute copied to the clipboard!",
+            written_content,
+        )
         self.assertIn("The attachment '%1' was modified.", written_content)
-        self.assertNotIn("Entry's &quot;%1&quot; attribute copied to the clipboard!", written_content)
+        self.assertNotIn(
+            "Entry's &quot;%1&quot; attribute copied to the clipboard!",
+            written_content,
+        )
         self.assertNotIn("The attachment &apos;%1&apos; was modified.", written_content)
-        self.assertIn("<translation>TRANSLATED: Auto-generate password for new entries</translation>", written_content)
-        self.assertIn("<translation>TRANSLATED: Failed to read string data: %1</translation>", written_content)
+        self.assertIn(
+            "<translation>TRANSLATED: Auto-generate password for new entries</translation>",
+            written_content,
+        )
+        self.assertIn(
+            "<translation>TRANSLATED: Failed to read string data: %1</translation>",
+            written_content,
+        )
         self.assertNotIn('type="unfinished"', written_content)
 
     @patch("sys.argv", ["auto_trans.py"])
