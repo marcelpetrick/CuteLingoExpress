@@ -6,6 +6,7 @@ strings and writes the updated translations back to the original file.
 """
 
 import sys
+import importlib
 import re
 import time
 import xml.etree.ElementTree
@@ -20,7 +21,10 @@ __version__ = VERSION
 MESSAGE_PATTERN = re.compile(r'(<message\b[^>]*>.*?</message>)', re.DOTALL)
 SOURCE_PATTERN = re.compile(r'<source>(.*?)</source>', re.DOTALL)
 TRANSLATION_PATTERN = re.compile(
-    r'(?P<indent>^[ \t]*)<translation\b(?P<attrs>[^>]*?)(?P<self_closing>\s*/>|>(?P<inner>.*?)</translation>)',
+    (
+        r'(?P<indent>^[ \t]*)<translation\b(?P<attrs>[^>]*?)'
+        r'(?P<self_closing>\s*/>|>(?P<inner>.*?)</translation>)'
+    ),
     re.DOTALL | re.MULTILINE,
 )
 
@@ -31,7 +35,7 @@ def preserve_xml_text_entities():
     Temporarily configure ElementTree to serialize quote characters in text
     nodes as XML entities so Qt TS files keep their original escaping style.
     """
-    original_escape_cdata = xml.etree.ElementTree._escape_cdata
+    original_escape_cdata = getattr(xml.etree.ElementTree, "_escape_cdata")
 
     def escape_cdata_with_entities(text):
         return (
@@ -40,11 +44,11 @@ def preserve_xml_text_entities():
             .replace("'", '&apos;')
         )
 
-    xml.etree.ElementTree._escape_cdata = escape_cdata_with_entities
+    setattr(xml.etree.ElementTree, "_escape_cdata", escape_cdata_with_entities)
     try:
         yield
     finally:
-        xml.etree.ElementTree._escape_cdata = original_escape_cdata
+        setattr(xml.etree.ElementTree, "_escape_cdata", original_escape_cdata)
 
 
 def write_ts_tree(tree, ts_file_path):
@@ -209,9 +213,8 @@ def translate_string(source_string: str, source_language: str, target_language: 
     :return: The translated string.
     :rtype: str
     """
-    import translators
-
     start_time = time.time()
+    translators = importlib.import_module("translators")
     output = translators.google(source_string, source_language, target_language)
     print(
         f"translateString: {time.time() - start_time}s : {source_string} -> {output} "
