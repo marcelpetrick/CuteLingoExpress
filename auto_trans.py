@@ -1,7 +1,8 @@
 """
-This is a Python script for translating .ts files from one language to another.
-It makes use of the translators library to translate individual strings in the file,
-updating the file with the new translations.
+Translate unfinished entries in Qt `.ts` files.
+
+The script uses the `translators` library to translate individual source
+strings and writes the updated translations back to the original file.
 """
 
 import sys
@@ -180,7 +181,7 @@ def get_help_text() -> str:
 
 def replace_first_lines(file_path):
     """
-    Replaces the first two lines of a file with the XML declaration and DOCTYPE.
+    Replace the first two lines of a file with the XML declaration and DOCTYPE.
 
     :param file_path: The path to the file to modify.
     :type file_path: str
@@ -197,7 +198,7 @@ def replace_first_lines(file_path):
 
 def translate_string(source_string: str, source_language: str, target_language: str) -> str:
     """
-    ...
+    Translate a single string with the configured backend.
 
     :param source_string: The string to translate.
     :type source_string: str
@@ -222,8 +223,9 @@ def translate_string(source_string: str, source_language: str, target_language: 
 
 def transform_ts_file(ts_file_path, _language, target_language):
     """
-    Transforms a .ts file by translating all 'unfinished' messages.
-    The translated messages replace the original messages in the .ts file.
+    Transform a `.ts` file by translating all unfinished messages.
+
+    The translated messages replace the original messages in the same file.
 
     :param ts_file_path: The path to the .ts file to transform.
     :type ts_file_path: str
@@ -274,8 +276,7 @@ def transform_ts_file(ts_file_path, _language, target_language):
 
 def main():
     """
-    The main entry point of the script. It checks if a file path was given as
-    command line argument and if so, calls the function to transform the .ts file.
+    Run the command-line interface for translating a Qt `.ts` file in place.
     """
     print(get_startup_banner())
 
@@ -299,7 +300,7 @@ def main():
 if __name__ == "__main__":
     main()
 
-# test call:
+# Example output from a manual run:
 # python auto_trans.py testing/helloworld.ts en cn
 #
 # Using Germany server backend.
@@ -310,6 +311,6 @@ if __name__ == "__main__":
 # Whole execution took 5.453961610794067s.
 # (venv) [mpetrick@marcel-precision3551 AutoTrans]$
 
-# manual tests:
+# Manual test commands:
 # python auto_trans.py testing/numerus.ts de cn
 # python auto_trans.py testing/helloworld.ts en cn
