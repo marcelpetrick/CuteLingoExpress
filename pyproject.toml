@@ -18,3 +18,15 @@ py-modules = ["auto_trans", "version"]
 
 [tool.setuptools.dynamic]
 version = {attr = "version.VERSION"}
+
+[tool.coverage.run]
+branch = true
+source = ["auto_trans", "version"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"

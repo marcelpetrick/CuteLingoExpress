@@ -54,6 +54,19 @@ The version is actively used across the lifecycle:
 
 ## Software quality
 * Please run the tests in `test_auto_trans.py` to check for regressions.
+* To generate coverage for the unit tests, install the development dependencies with `pip install -r requirements-dev.txt`.
+* Run `python -m coverage run -m unittest` to execute the full test suite with coverage collection.
+* Run `python -m coverage report -m` to print a line-by-line coverage summary in the terminal.
+* Run `python -m coverage html` to generate an HTML report in `htmlcov/index.html`.
+```sh
+python -m coverage report -m
+Name            Stmts   Miss Branch BrPart   Cover   Missing
+------------------------------------------------------------
+auto_trans.py     123     15     30      6  84.97%   90, 104-114, 143, 251-252, 290-297, 301
+version.py          5      1      0      0  80.00%   13
+------------------------------------------------------------
+TOTAL             128     16     30      6  84.81%
+```
 * `pylint` gives it a rating of 10/10.
 
 # Naming?
