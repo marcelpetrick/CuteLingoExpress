@@ -5,7 +5,7 @@ CuteLingoExpress is a tool for translating Qt `.ts` files during internationaliz
 The logo consists of a cute (Qt..) snake (Python) circling a upper-case TS (symbolising the tanslation files).
 
 ## Motivation
-Internationalization plays a crucial role in developing successful applications, as not all customers are comfortable with English. Qt provides a comprehensive ecosystem for handling internationalization, including language support in C++/Qt and tools such as `lupdate` and Linguist. One thing that was missing was a quick way to automatically generate translations and review them in the context of an app's layouts. CuteLingoExpress fills that gap by automating the translation process and giving developers a convenient way to assess layout compatibility.
+Internationalization plays a crucial role in developing successful applications, as not all customers are comfortable with English. Qt provides a comprehensive ecosystem for handling internationalization, including language support in C++/Qt and tools such as `lupdate`, `release` and `Linguist`. One thing that was missing was a quick way to automatically generate translations and review them in the context of an app's layouts. CuteLingoExpress fills that gap by automating the translation process and giving developers a convenient way to assess layout compatibility.
 
 # Usage
 
@@ -25,7 +25,7 @@ python auto_trans.py --version
 Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
 ```shell
 $ python auto_trans.py testing/helloworld.ts en cn
-CuteLingoExpress 0.1.4
+CuteLingoExpress 0.2.0
 Using Germany server backend.
 translateString: 0.5832037925720215s : Hello world! -> 你好世界！ (en -> cn)
 translateString: 1.0015525817871094s : My first dish. -> 我的第一道菜。 (en -> cn)
@@ -35,7 +35,8 @@ Whole execution took 3.1223082542419434s.
 ```
 
 ## Versioning
-CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).
+CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).  
+Current version is v0.2.0 (see Git tag).
 
 The version is actively used across the lifecycle:
 * The single source of truth is [`version.py`](version.py).
@@ -58,28 +59,44 @@ The version is actively used across the lifecycle:
 ## Software quality
 ### Unit testing
 * Please run the tests in `test_auto_trans.py` to check for regressions.
+```sh
+python test_auto_trans.py                                                                                                     1 ✘  CuteLingoExpress  
+................TS file transformed successfully.
+.TS file transformed successfully.
+.TS file transformed successfully.
+.TS file transformed successfully.
+.TS file transformed successfully.
+.TS file transformed successfully.
+.translateString: 1.2636184692382812e-05s : Hello world -> 你好世界 (en -> cn)
+......
+----------------------------------------------------------------------
+Ran 28 tests in 0.019s
+
+OK
+```
+
 * To generate coverage for the unit tests, install the development dependencies with `pip install -r requirements-dev.txt`.
 * Run `python -m coverage run -m unittest` to execute the full test suite with coverage collection.
 * Run `python -m coverage report -m` to print a line-by-line coverage summary in the terminal.
 * Run `python -m coverage html` to generate an HTML report in `htmlcov/index.html`.
 ```sh
 python -m coverage report -m
-Name            Stmts   Miss Branch BrPart   Cover   Missing
-------------------------------------------------------------
-auto_trans.py     123     15     30      6  84.97%   90, 104-114, 143, 251-252, 290-297, 301
-version.py          5      1      0      0  80.00%   13
-------------------------------------------------------------
-TOTAL             128     16     30      6  84.81%
+Name            Stmts   Miss Branch BrPart    Cover   Missing
+-------------------------------------------------------------
+auto_trans.py     124      0     30      0  100.00%
+version.py          5      0      0      0  100.00%
+-------------------------------------------------------------
+TOTAL             129      0     30      0  100.00%
 ```
 
 ### Linting
-* `pylint` gives it a rating of 10/10.
+* `pylint` gives it a rating of 9.97/10 with release v0.2.0.
 * Run `python -m pylint auto_trans.py test_auto_trans.py version.py` to lint the Python modules.
 ```sh
-python -m pylint auto_trans.py test_auto_trans.py version.py 
+python -m pylint auto_trans.py test_auto_trans.py version.py                                                               ✔  CuteLingoExpress  
 
--------------------------------------------------------------------
-Your code has been rated at 10.00/10 (previous run: 9.31/10, +0.69)
+--------------------------------------------------------------------
+Your code has been rated at 10.00/10 (previous run: 10.00/10, +0.00)
 ```
 
 # Naming?

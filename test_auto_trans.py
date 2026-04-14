@@ -3,6 +3,7 @@ Unit tests for auto_trans.py.
 These tests cover the main helpers and command-line behavior.
 """
 
+import runpy
 import shutil
 import tempfile
 import unittest
@@ -12,11 +13,33 @@ from unittest.mock import MagicMock, call, patch
 from xml.etree import ElementTree
 
 import auto_trans
-from version import VERSION, get_startup_banner
+from version import VERSION, get_startup_banner, get_version
 
 
-class AutoTransTest(unittest.TestCase):
-    """Tests for the auto_trans module."""
+class VersionTests(unittest.TestCase):
+    """Tests for version metadata and startup banners."""
+
+    def test_version_is_semver(self):
+        """
+        Test that the central application version follows semantic versioning.
+        """
+        self.assertRegex(VERSION, r"^\d+\.\d+\.\d+$")
+
+    def test_startup_banner_contains_version(self):
+        """
+        Test that the startup banner surfaces the configured version.
+        """
+        self.assertEqual(get_startup_banner(), f"CuteLingoExpress {VERSION}")
+
+    def test_get_version_returns_configured_version(self):
+        """
+        Test that get_version returns the configured semantic version string.
+        """
+        self.assertEqual(get_version(), VERSION)
+
+
+class HelperFunctionTests(unittest.TestCase):
+    """Tests for standalone helper functions in auto_trans."""
 
     @patch("builtins.open", new_callable=MagicMock)
     def test_replace_first_lines(self, mock_open):
@@ -39,46 +62,6 @@ class AutoTransTest(unittest.TestCase):
         self.assertEqual(result, "你好世界")
         mock_google.assert_called_once_with("Hello world", "en", "cn")
 
-    @patch("auto_trans.translate_string", return_value="你好世界")
-    def test_transform_ts_file(self, mock_translate_string):
-        """
-        Test that transform_ts_file updates a .ts file correctly.
-        """
-        content = """<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE TS>
-<TS version="2.1" language="de_DE">
-<context>
-    <name>QPushButton</name>
-    <message>
-        <source>Hello world</source>
-        <translation type="unfinished"/>
-    </message>
-</context>
-</TS>
-"""
-        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix=".ts") as temp_file:
-            temp_file.write(content)
-            temp_file.flush()
-            auto_trans.transform_ts_file(temp_file.name, "en", "cn")
-            temp_file.seek(0)
-            written_content = temp_file.read()
-
-        mock_translate_string.assert_called_once_with("Hello world", "en", "cn")
-        self.assertIn("<translation>你好世界</translation>", written_content)
-        self.assertNotIn('type="unfinished"', written_content)
-
-    def test_version_is_semver(self):
-        """
-        Test that the central application version follows semantic versioning.
-        """
-        self.assertRegex(VERSION, r"^\d+\.\d+\.\d+$")
-
-    def test_startup_banner_contains_version(self):
-        """
-        Test that the startup banner surfaces the configured version.
-        """
-        self.assertEqual(get_startup_banner(), f"CuteLingoExpress {VERSION}")
-
     def test_help_text_contains_description_and_example(self):
         """
         Test that the short help text includes a description and example usage.
@@ -88,15 +71,6 @@ class AutoTransTest(unittest.TestCase):
         self.assertIn("Translate unfinished entries in a Qt .ts file in place.", help_text)
         self.assertIn("Usage: python auto_trans.py", help_text)
         self.assertIn("python auto_trans.py testing/helloworld.ts en cn", help_text)
-
-    @patch("sys.argv", ["auto_trans.py", "--version"])
-    @patch("builtins.print")
-    def test_main_prints_version_banner_first(self, mock_print):
-        """
-        Test that startup prints the application version before doing anything else.
-        """
-        auto_trans.main()
-        mock_print.assert_called_once_with(get_startup_banner())
 
     def test_write_ts_tree_preserves_quoted_entities_in_text(self):
         """
@@ -221,6 +195,136 @@ class AutoTransTest(unittest.TestCase):
             written_content,
         )
 
+    def test_escape_ts_text_preserves_requested_quote_entities(self):
+        """
+        Test that translated text can preserve both quote styles when requested.
+        """
+        escaped_text = auto_trans.escape_ts_text(
+            'Entry\'s "value" & more',
+            preserve_double_quotes=True,
+            preserve_single_quotes=True,
+        )
+
+        self.assertEqual(
+            escaped_text,
+            "Entry&apos;s &quot;value&quot; &amp; more",
+        )
+
+    def test_remove_unfinished_type_preserves_other_attributes(self):
+        """
+        Test that unfinished is removed while other translation attributes remain.
+        """
+        updated_attributes = auto_trans.remove_unfinished_type(
+            ' type="unfinished" variants="yes" '
+        )
+
+        self.assertEqual(updated_attributes, ' variants="yes"')
+
+    def test_remove_unfinished_type_returns_empty_string_when_no_attributes_remain(self):
+        """
+        Test that an empty attribute string stays empty after cleanup.
+        """
+        self.assertEqual(
+            auto_trans.remove_unfinished_type(' type="unfinished"'),
+            "",
+        )
+
+    def test_replace_translation_in_message_raises_for_missing_translation_block(self):
+        """
+        Test that malformed TS message blocks raise a descriptive error.
+        """
+        message_block = "<message><source>Hello</source></message>"
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Unable to locate source or translation block",
+        ):
+            auto_trans.replace_translation_in_message(
+                message_block,
+                "Hallo",
+                numerus=False,
+            )
+
+    def test_replace_translation_in_message_handles_numerus_entries(self):
+        """
+        Test that numerus messages receive two translated numerusform entries.
+        """
+        message_block = """    <message numerus="yes">
+        <source>%n file(s)</source>
+        <translation type="unfinished"></translation>
+    </message>"""
+
+        updated_block = auto_trans.replace_translation_in_message(
+            message_block,
+            "%n Datei(en)",
+            numerus=True,
+        )
+
+        self.assertIn("<numerusform>%n Datei(en)</numerusform>", updated_block)
+        self.assertEqual(updated_block.count("<numerusform>"), 2)
+        self.assertNotIn('type="unfinished"', updated_block)
+
+    def test_update_ts_content_raises_when_message_count_changes(self):
+        """
+        Test that mismatched message counts fail instead of corrupting the file.
+        """
+        original_content = "<TS><message></message></TS>"
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "TS message count changed while processing the file",
+        ):
+            auto_trans.update_ts_content(original_content, [])
+
+    def test_update_ts_content_adds_trailing_newline(self):
+        """
+        Test that updated TS content always ends with a trailing newline.
+        """
+        original_content = """<TS>
+<message>
+    <source>Hello</source>
+    <translation type="unfinished"></translation>
+</message>
+</TS>"""
+        updated_content = auto_trans.update_ts_content(
+            original_content,
+            [{"translated_text": "Hallo", "numerus": False}],
+        )
+
+        self.assertTrue(updated_content.endswith("\n"))
+
+
+class TransformTsFileTests(unittest.TestCase):
+    """Tests for transforming TS files in place."""
+
+    @patch("auto_trans.translate_string", return_value="你好世界")
+    def test_transform_ts_file(self, mock_translate_string):
+        """
+        Test that transform_ts_file updates a .ts file correctly.
+        """
+        content = """<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1" language="de_DE">
+<context>
+    <name>QPushButton</name>
+    <message>
+        <source>Hello world</source>
+        <translation type="unfinished"/>
+    </message>
+</context>
+</TS>
+"""
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix=".ts") as temp_file:
+            temp_file.write(content)
+            temp_file.flush()
+            auto_trans.transform_ts_file(temp_file.name, "en", "cn")
+            temp_file.seek(0)
+            written_content = temp_file.read()
+
+        mock_translate_string.assert_called_once_with("Hello world", "en", "cn")
+        self.assertIn("<translation>你好世界</translation>", written_content)
+        self.assertNotIn('type="unfinished"', written_content)
+
     def test_keepassxc_fixture_contains_mixed_quote_styles(self):
         """
         Test that the KeePassXC fixture covers both entity and literal apostrophe styles.
@@ -275,6 +379,85 @@ class AutoTransTest(unittest.TestCase):
         )
         self.assertNotIn('type="unfinished"', written_content)
 
+    @patch("auto_trans.translate_string", return_value="%n Datei(en)")
+    def test_transform_ts_file_updates_unfinished_numerus_messages(
+        self,
+        mock_translate_string,
+    ):
+        """
+        Test that unfinished numerus messages are translated and written back.
+        """
+        content = """<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1" language="de_DE">
+<context>
+    <name>Example</name>
+    <message numerus="yes">
+        <source>%n file(s)</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+</TS>
+"""
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix=".ts") as temp_file:
+            temp_file.write(content)
+            temp_file.flush()
+            auto_trans.transform_ts_file(temp_file.name, "en", "de")
+            temp_file.seek(0)
+            written_content = temp_file.read()
+
+        mock_translate_string.assert_called_once_with("%n file(s)", "en", "de")
+        self.assertEqual(written_content.count("<numerusform>%n Datei(en)</numerusform>"), 2)
+        self.assertNotIn('type="unfinished"', written_content)
+
+    def test_transform_ts_file_skips_finished_messages(self):
+        """
+        Test that finished singular and numerus messages are left untouched.
+        """
+        content = """<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1" language="de_DE">
+<context>
+    <name>Example</name>
+    <message>
+        <source>Hello</source>
+        <translation>Hallo</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s)</source>
+        <translation>
+            <numerusform>%n Datei</numerusform>
+            <numerusform>%n Dateien</numerusform>
+        </translation>
+    </message>
+</context>
+</TS>
+"""
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix=".ts") as temp_file:
+            temp_file.write(content)
+            temp_file.flush()
+            with patch("auto_trans.translate_string") as mock_translate_string:
+                auto_trans.transform_ts_file(temp_file.name, "en", "de")
+            temp_file.seek(0)
+            written_content = temp_file.read()
+
+        mock_translate_string.assert_not_called()
+        self.assertIn("<translation>Hallo</translation>", written_content)
+        self.assertIn("<numerusform>%n Datei</numerusform>", written_content)
+
+
+class CliTests(unittest.TestCase):
+    """Tests for the command-line interface entrypoints."""
+
+    @patch("sys.argv", ["auto_trans.py", "--version"])
+    @patch("builtins.print")
+    def test_main_prints_version_banner_first(self, mock_print):
+        """
+        Test that startup prints the application version before doing anything else.
+        """
+        auto_trans.main()
+        mock_print.assert_called_once_with(get_startup_banner())
+
     @patch("sys.argv", ["auto_trans.py"])
     @patch("builtins.print")
     def test_main_prints_help_for_naked_invocation(self, mock_print):
@@ -299,6 +482,56 @@ class AutoTransTest(unittest.TestCase):
         self.assertEqual(
             mock_print.call_args_list,
             [call(get_startup_banner()), call(auto_trans.get_help_text())]
+        )
+
+    @patch("sys.argv", ["auto_trans.py", "only-path"])
+    @patch("builtins.print")
+    def test_main_prints_help_for_incomplete_arguments(self, mock_print):
+        """
+        Test that too few positional arguments print the short help message.
+        """
+        auto_trans.main()
+
+        self.assertEqual(
+            mock_print.call_args_list,
+            [call(get_startup_banner()), call(auto_trans.get_help_text())],
+        )
+
+    @patch("auto_trans.time.time", side_effect=[10.0, 12.5])
+    @patch("auto_trans.transform_ts_file")
+    @patch("sys.argv", ["auto_trans.py", "testing/helloworld.ts", "en", "de"])
+    @patch("builtins.print")
+    def test_main_runs_translation_and_prints_duration(
+        self,
+        mock_print,
+        mock_transform_ts_file,
+        _mock_time,
+    ):
+        """
+        Test that the CLI runs the translation flow and reports execution time.
+        """
+        auto_trans.main()
+
+        mock_transform_ts_file.assert_called_once_with("testing/helloworld.ts", "en", "de")
+        self.assertEqual(
+            mock_print.call_args_list,
+            [
+                call(get_startup_banner()),
+                call("Whole execution took 2.5s."),
+            ],
+        )
+
+    @patch("builtins.print")
+    def test_running_module_as_script_calls_main(self, mock_print):
+        """
+        Test that executing auto_trans.py as __main__ triggers the CLI entrypoint.
+        """
+        with patch("sys.argv", ["auto_trans.py", "--help"]):
+            runpy.run_path(Path("auto_trans.py"), run_name="__main__")
+
+        self.assertEqual(
+            mock_print.call_args_list,
+            [call(get_startup_banner()), call(auto_trans.get_help_text())],
         )
 
 

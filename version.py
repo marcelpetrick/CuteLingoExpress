@@ -5,7 +5,7 @@ This module is intentionally dependency-free so build tooling and runtime code
 can use the same version value without importing the translator stack.
 """
 
-VERSION = "0.1.8"
+VERSION = "0.2.0"
 
 
 def get_version() -> str:
