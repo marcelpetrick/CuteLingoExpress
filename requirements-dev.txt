@@ -1,0 +1,2 @@
+-r requirements.txt
+coverage[toml]>=7.6,<8
