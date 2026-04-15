@@ -293,6 +293,44 @@ class HelperFunctionTests(unittest.TestCase):
 
         self.assertTrue(updated_content.endswith("\n"))
 
+    def test_format_run_summary_includes_requested_statistics(self):
+        """
+        Test that the CLI summary prints version, counts, and runtime.
+        """
+        summary = auto_trans.format_run_summary(
+            {
+                "version": VERSION,
+                "source_language": "en",
+                "target_language": "de",
+                "backend": "google",
+                "messages_scanned": 12,
+                "unfinished_before": 7,
+                "translated_count": 5,
+                "numerus_translated_count": 2,
+                "skipped_count": 2,
+                "average_translation_seconds": 0.5,
+                "runtime_seconds": 2.5,
+            }
+        )
+
+        self.assertEqual(
+            summary,
+            (
+                "Run summary:\n"
+                "CuteLingoExpress: https://github.com/marcelpetrick/CuteLingoExpress\n"
+                f"Version: {VERSION}\n"
+                "Language direction: en -> de\n"
+                "Backend: google\n"
+                "Messages scanned: 12\n"
+                "Unfinished strings before: 7\n"
+                "Translated strings: 5\n"
+                "Numerus translations: 2\n"
+                "Skipped strings: 2\n"
+                "Average translation time: 0.5s\n"
+                "Overall runtime: 2.5s"
+            ),
+        )
+
 
 class TransformTsFileTests(unittest.TestCase):
     """Tests for transforming TS files in place."""
@@ -317,13 +355,27 @@ class TransformTsFileTests(unittest.TestCase):
         with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix=".ts") as temp_file:
             temp_file.write(content)
             temp_file.flush()
-            auto_trans.transform_ts_file(temp_file.name, "en", "cn")
+            stats = auto_trans.transform_ts_file(temp_file.name, "en", "cn")
             temp_file.seek(0)
             written_content = temp_file.read()
 
         mock_translate_string.assert_called_once_with("Hello world", "en", "cn")
         self.assertIn("<translation>你好世界</translation>", written_content)
         self.assertNotIn('type="unfinished"', written_content)
+        self.assertEqual(
+            {
+                key: value for key, value in stats.items()
+                if key != "average_translation_seconds"
+            },
+            {
+                "messages_scanned": 1,
+                "unfinished_before": 1,
+                "translated_count": 1,
+                "numerus_translated_count": 0,
+                "skipped_count": 0,
+            },
+        )
+        self.assertGreaterEqual(stats["average_translation_seconds"], 0.0)
 
     def test_keepassxc_fixture_contains_mixed_quote_styles(self):
         """
@@ -355,7 +407,7 @@ class TransformTsFileTests(unittest.TestCase):
             temp_path = Path(temp_dir) / fixture_path.name
             shutil.copyfile(fixture_path, temp_path)
 
-            auto_trans.transform_ts_file(str(temp_path), "en", "de")
+            stats = auto_trans.transform_ts_file(str(temp_path), "en", "de")
             written_content = temp_path.read_text(encoding="utf-8")
 
         self.assertEqual(mock_translate_string.call_count, 5)
@@ -378,6 +430,12 @@ class TransformTsFileTests(unittest.TestCase):
             written_content,
         )
         self.assertNotIn('type="unfinished"', written_content)
+        self.assertEqual(stats["unfinished_before"], 5)
+        self.assertEqual(stats["translated_count"], 5)
+        self.assertEqual(stats["numerus_translated_count"], 0)
+        self.assertEqual(stats["skipped_count"], 0)
+        self.assertGreaterEqual(stats["messages_scanned"], 5)
+        self.assertGreaterEqual(stats["average_translation_seconds"], 0.0)
 
     @patch("auto_trans.translate_string", return_value="%n Datei(en)")
     def test_transform_ts_file_updates_unfinished_numerus_messages(
@@ -402,13 +460,27 @@ class TransformTsFileTests(unittest.TestCase):
         with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix=".ts") as temp_file:
             temp_file.write(content)
             temp_file.flush()
-            auto_trans.transform_ts_file(temp_file.name, "en", "de")
+            stats = auto_trans.transform_ts_file(temp_file.name, "en", "de")
             temp_file.seek(0)
             written_content = temp_file.read()
 
         mock_translate_string.assert_called_once_with("%n file(s)", "en", "de")
         self.assertEqual(written_content.count("<numerusform>%n Datei(en)</numerusform>"), 2)
         self.assertNotIn('type="unfinished"', written_content)
+        self.assertEqual(
+            {
+                key: value for key, value in stats.items()
+                if key != "average_translation_seconds"
+            },
+            {
+                "messages_scanned": 1,
+                "unfinished_before": 1,
+                "translated_count": 1,
+                "numerus_translated_count": 1,
+                "skipped_count": 0,
+            },
+        )
+        self.assertGreaterEqual(stats["average_translation_seconds"], 0.0)
 
     def test_transform_ts_file_skips_finished_messages(self):
         """
@@ -437,13 +509,24 @@ class TransformTsFileTests(unittest.TestCase):
             temp_file.write(content)
             temp_file.flush()
             with patch("auto_trans.translate_string") as mock_translate_string:
-                auto_trans.transform_ts_file(temp_file.name, "en", "de")
+                stats = auto_trans.transform_ts_file(temp_file.name, "en", "de")
             temp_file.seek(0)
             written_content = temp_file.read()
 
         mock_translate_string.assert_not_called()
         self.assertIn("<translation>Hallo</translation>", written_content)
         self.assertIn("<numerusform>%n Datei</numerusform>", written_content)
+        self.assertEqual(
+            stats,
+            {
+                "messages_scanned": 2,
+                "unfinished_before": 0,
+                "translated_count": 0,
+                "numerus_translated_count": 0,
+                "skipped_count": 0,
+                "average_translation_seconds": 0.0,
+            },
+        )
 
 
 class CliTests(unittest.TestCase):
@@ -498,7 +581,17 @@ class CliTests(unittest.TestCase):
         )
 
     @patch("auto_trans.time.time", side_effect=[10.0, 12.5])
-    @patch("auto_trans.transform_ts_file")
+    @patch(
+        "auto_trans.transform_ts_file",
+        return_value={
+            "messages_scanned": 10,
+            "unfinished_before": 4,
+            "translated_count": 4,
+            "numerus_translated_count": 1,
+            "skipped_count": 0,
+            "average_translation_seconds": 0.4,
+        },
+    )
     @patch("sys.argv", ["auto_trans.py", "testing/helloworld.ts", "en", "de"])
     @patch("builtins.print")
     def test_main_runs_translation_and_prints_duration(
@@ -517,7 +610,20 @@ class CliTests(unittest.TestCase):
             mock_print.call_args_list,
             [
                 call(get_startup_banner()),
-                call("Whole execution took 2.5s."),
+                call(
+                    "Run summary:\n"
+                    "CuteLingoExpress: https://github.com/marcelpetrick/CuteLingoExpress\n"
+                    f"Version: {VERSION}\n"
+                    "Language direction: en -> de\n"
+                    "Backend: google\n"
+                    "Messages scanned: 10\n"
+                    "Unfinished strings before: 4\n"
+                    "Translated strings: 4\n"
+                    "Numerus translations: 1\n"
+                    "Skipped strings: 0\n"
+                    "Average translation time: 0.4s\n"
+                    "Overall runtime: 2.5s"
+                ),
             ],
         )
 

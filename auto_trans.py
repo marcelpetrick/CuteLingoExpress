@@ -17,6 +17,8 @@ from version import VERSION, get_startup_banner
 
 
 __version__ = VERSION
+PROJECT_URL = "https://github.com/marcelpetrick/CuteLingoExpress"
+TRANSLATION_BACKEND = "google"
 
 MESSAGE_PATTERN = re.compile(r'(<message\b[^>]*>.*?</message>)', re.DOTALL)
 SOURCE_PATTERN = re.compile(r'<source>(.*?)</source>', re.DOTALL)
@@ -224,6 +226,26 @@ def translate_string(source_string: str, source_language: str, target_language: 
     return output
 
 
+def format_run_summary(summary):
+    """
+    Format a compact end-of-run summary for terminal output.
+    """
+    return (
+        "Run summary:\n"
+        f"CuteLingoExpress: {PROJECT_URL}\n"
+        f"Version: {summary['version']}\n"
+        f"Language direction: {summary['source_language']} -> {summary['target_language']}\n"
+        f"Backend: {summary['backend']}\n"
+        f"Messages scanned: {summary['messages_scanned']}\n"
+        f"Unfinished strings before: {summary['unfinished_before']}\n"
+        f"Translated strings: {summary['translated_count']}\n"
+        f"Numerus translations: {summary['numerus_translated_count']}\n"
+        f"Skipped strings: {summary['skipped_count']}\n"
+        f"Average translation time: {summary['average_translation_seconds']}s\n"
+        f"Overall runtime: {summary['runtime_seconds']}s"
+    )
+
+
 def transform_ts_file(ts_file_path, _language, target_language):
     """
     Transform a `.ts` file by translating all unfinished messages.
@@ -243,30 +265,45 @@ def transform_ts_file(ts_file_path, _language, target_language):
     tree = xml.etree.ElementTree.parse(ts_file_path)
     root = tree.getroot()
     translated_messages = []
+    messages_scanned = 0
+    unfinished_before = 0
+    translated_count = 0
+    numerus_translated_count = 0
+    total_translation_seconds = 0.0
 
     for message in root.iter('message'):
+        messages_scanned += 1
         numerus = message.attrib.get('numerus') == 'yes'
         if numerus:
             source_text = message.find('source').text
             unfinished_translation = message.find('translation')
             if unfinished_translation is not None and \
                     unfinished_translation.attrib.get('type') == 'unfinished':
+                unfinished_before += 1
+                translation_start = time.time()
                 translated_text = translate_string(source_text, _language, target_language)
+                total_translation_seconds += time.time() - translation_start
                 translated_messages.append({
                     'translated_text': translated_text,
                     'numerus': True,
                 })
+                translated_count += 1
+                numerus_translated_count += 1
             else:
                 translated_messages.append(None)
         else:
             translation = message.find('translation')
             if translation is not None and translation.attrib.get('type') == 'unfinished':
+                unfinished_before += 1
                 source_text = message.find('source').text
+                translation_start = time.time()
                 translated_text = translate_string(source_text, _language, target_language)
+                total_translation_seconds += time.time() - translation_start
                 translated_messages.append({
                     'translated_text': translated_text,
                     'numerus': False,
                 })
+                translated_count += 1
             else:
                 translated_messages.append(None)
 
@@ -275,6 +312,16 @@ def transform_ts_file(ts_file_path, _language, target_language):
         file.write(updated_content)
 
     print("TS file transformed successfully.")
+    return {
+        'messages_scanned': messages_scanned,
+        'unfinished_before': unfinished_before,
+        'translated_count': translated_count,
+        'numerus_translated_count': numerus_translated_count,
+        'skipped_count': unfinished_before - translated_count,
+        'average_translation_seconds': (
+            total_translation_seconds / translated_count if translated_count else 0.0
+        ),
+    }
 
 
 def main():
@@ -295,9 +342,28 @@ def main():
         return
 
     ts_file_path = sys.argv[1]
+    source_language = sys.argv[2]
+    target_language = sys.argv[3]
     start_time = time.time()
-    transform_ts_file(ts_file_path, sys.argv[2], sys.argv[3])
-    print(f"Whole execution took {time.time() - start_time}s.")
+    transform_stats = transform_ts_file(ts_file_path, source_language, target_language)
+    runtime_seconds = time.time() - start_time
+    print(
+        format_run_summary(
+            {
+                'version': VERSION,
+                'source_language': source_language,
+                'target_language': target_language,
+                'backend': TRANSLATION_BACKEND,
+                'messages_scanned': transform_stats['messages_scanned'],
+                'unfinished_before': transform_stats['unfinished_before'],
+                'translated_count': transform_stats['translated_count'],
+                'numerus_translated_count': transform_stats['numerus_translated_count'],
+                'skipped_count': transform_stats['skipped_count'],
+                'average_translation_seconds': transform_stats['average_translation_seconds'],
+                'runtime_seconds': runtime_seconds,
+            }
+        )
+    )
 
 
 if __name__ == "__main__":
