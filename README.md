@@ -25,7 +25,7 @@ python auto_trans.py --version
 Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
 ```shell
 $ python auto_trans.py testing/helloworld.ts en cn
-CuteLingoExpress 0.2.0
+CuteLingoExpress 0.2.1
 Using Germany server backend.
 translateString: 0.5832037925720215s : Hello world! -> 你好世界！ (en -> cn)
 translateString: 1.0015525817871094s : My first dish. -> 我的第一道菜。 (en -> cn)
@@ -36,7 +36,7 @@ Whole execution took 3.1223082542419434s.
 
 ## Versioning
 CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).  
-Current version is v0.2.0 (see Git tag).
+Current version is v0.2.1 (see Git tag).
 
 The version is actively used across the lifecycle:
 * The single source of truth is [`version.py`](version.py).
@@ -90,7 +90,7 @@ TOTAL             129      0     30      0  100.00%
 ```
 
 ### Linting
-* `pylint` gives it a rating of 9.97/10 with release v0.2.0.
+* `pylint` gives it a rating of 9.97/10 with release v0.2.1.
 * Run `python -m pylint auto_trans.py test_auto_trans.py version.py` to lint the Python modules.
 ```sh
 python -m pylint auto_trans.py test_auto_trans.py version.py                                                               ✔  CuteLingoExpress  
