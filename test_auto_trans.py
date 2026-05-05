@@ -38,7 +38,7 @@ class VersionTests(unittest.TestCase):
         self.assertEqual(get_version(), VERSION)
 
 
-class HelperFunctionTests(unittest.TestCase):
+class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public-methods
     """Tests for standalone helper functions in auto_trans."""
 
     @patch("builtins.open", new_callable=MagicMock)
@@ -55,13 +55,22 @@ class HelperFunctionTests(unittest.TestCase):
         Test that translate_string calls the appropriate translation function
         and returns the correct result.
         """
-        mock_google = MagicMock(return_value="你好世界")
+        mock_translate_text = MagicMock(return_value="你好世界")
 
-        with patch.dict("sys.modules", {"translators": SimpleNamespace(google=mock_google)}):
+        with patch.dict(
+            "sys.modules",
+            {"translators": SimpleNamespace(translate_text=mock_translate_text)},
+        ):
             result = auto_trans.translate_string("Hello world", "en", "cn")
 
         self.assertEqual(result, "你好世界")
-        mock_google.assert_called_once_with("Hello world", "en", "cn")
+        mock_translate_text.assert_called_once_with(
+            "Hello world",
+            translator="google",
+            from_language="en",
+            to_language="cn",
+            timeout=auto_trans.TRANSLATION_TIMEOUT_SECONDS,
+        )
 
     @patch("auto_trans.time.time", side_effect=[20.0, 22.345656356])
     @patch("builtins.print")
@@ -73,14 +82,53 @@ class HelperFunctionTests(unittest.TestCase):
         """
         Test that translation timing output does not expose noisy precision.
         """
-        mock_google = MagicMock(return_value="你好世界")
+        mock_translate_text = MagicMock(return_value="你好世界")
 
-        with patch.dict("sys.modules", {"translators": SimpleNamespace(google=mock_google)}):
+        with patch.dict(
+            "sys.modules",
+            {"translators": SimpleNamespace(translate_text=mock_translate_text)},
+        ):
             auto_trans.translate_string("Hello world", "en", "cn")
 
         mock_print.assert_called_once_with(
-            "translateString: 2.3s : Hello world -> 你好世界 (en -> cn)"
+            "translateString[google]: 2.3s : Hello world -> 你好世界 (en -> cn)"
         )
+
+    def test_translate_string_falls_back_to_next_backend(self):
+        """
+        Test that a transient primary backend failure uses the next backend.
+        """
+        mock_translate_text = MagicMock(side_effect=[RuntimeError("google failed"), "你好世界"])
+
+        with patch.dict(
+            "sys.modules",
+            {"translators": SimpleNamespace(translate_text=mock_translate_text)},
+        ):
+            result = auto_trans.translate_string("Hello world", "en", "cn")
+
+        self.assertEqual(result, "你好世界")
+        self.assertEqual(
+            [call.kwargs["translator"] for call in mock_translate_text.call_args_list],
+            ["google", "bing"],
+        )
+
+    def test_translate_string_raises_after_all_backends_fail(self):
+        """
+        Test that backend failures are reported after the fallback chain is exhausted.
+        """
+        mock_translate_text = MagicMock(side_effect=RuntimeError("offline"))
+
+        with patch.dict(
+            "sys.modules",
+            {"translators": SimpleNamespace(translate_text=mock_translate_text)},
+        ):
+            with self.assertRaisesRegex(
+                auto_trans.TranslationBackendError,
+                "All translation backends failed",
+            ):
+                auto_trans.translate_string("Hello world", "en", "cn")
+
+        self.assertEqual(mock_translate_text.call_count, len(auto_trans.TRANSLATION_BACKENDS))
 
     def test_format_duration_seconds_truncates_to_one_decimal(self):
         """
@@ -373,7 +421,7 @@ class HelperFunctionTests(unittest.TestCase):
                 "version": VERSION,
                 "source_language": "en",
                 "target_language": "de",
-                "backend": "google",
+                "backend": "google -> bing -> myMemory",
                 "messages_scanned": 12,
                 "unfinished_before": 7,
                 "translated_count": 5,
@@ -391,7 +439,7 @@ class HelperFunctionTests(unittest.TestCase):
                 "CuteLingoExpress: https://github.com/marcelpetrick/CuteLingoExpress\n"
                 f"Version: {VERSION}\n"
                 "Language direction: en -> de\n"
-                "Backend: google\n"
+                "Backend: google -> bing -> myMemory\n"
                 "Messages scanned: 12\n"
                 "Unfinished strings before: 7\n"
                 "Translated strings: 5\n"
@@ -689,7 +737,7 @@ class CliTests(unittest.TestCase):
                     "CuteLingoExpress: https://github.com/marcelpetrick/CuteLingoExpress\n"
                     f"Version: {VERSION}\n"
                     "Language direction: en -> de\n"
-                    "Backend: google\n"
+                    "Backend: google -> bing -> myMemory\n"
                     "Messages scanned: 10\n"
                     "Unfinished strings before: 4\n"
                     "Translated strings: 4\n"

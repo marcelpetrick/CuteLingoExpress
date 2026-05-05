@@ -22,7 +22,7 @@ To use CuteLingoExpress, install the required package with:
 The project requires Python 3.12 or newer. Dependencies are pinned in [`pyproject.toml`](pyproject.toml), including `translators==6.0.4`.
 
 ## Invocation
-CuteLingoExpress is invoked by providing the path to the `.ts` file that needs translation and the ISO 639-1 language codes for the source and target languages. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. The following examples demonstrate the usage:
+CuteLingoExpress is invoked by providing the path to the `.ts` file that needs translation and the ISO 639-1 language codes for the source and target languages. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. Translation requests use a fallback chain of `google -> bing -> myMemory` with a per-backend timeout. The following examples demonstrate the usage:
 ```shell
 python auto_trans.py testing/numerus.ts de cn
 python auto_trans.py testing/helloworld.ts en cn
@@ -31,18 +31,18 @@ python auto_trans.py --version
 Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
 ```shell
 $ python auto_trans.py testing/helloworld.ts en cn
-CuteLingoExpress 0.2.8
+CuteLingoExpress 0.2.9
 Using Germany server backend.
-translateString: 0.5s : Hello world! -> 你好世界！ (en -> cn)
-translateString: 1.0s : My first dish. -> 我的第一道菜。 (en -> cn)
-translateString: 1.5s : white bread with butter -> 白面包和黄油 (en -> cn)
+translateString[google]: 0.5s : Hello world! -> 你好世界！ (en -> cn)
+translateString[google]: 1.0s : My first dish. -> 我的第一道菜。 (en -> cn)
+translateString[google]: 1.5s : white bread with butter -> 白面包和黄油 (en -> cn)
 TS file transformed successfully.
 Overall runtime: 3.1s
 ```
 
 ## Versioning
 CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).  
-Current version is v0.2.8 (see Git tag).
+Current version is v0.2.9 (see Git tag).
 
 The version is actively used across the lifecycle:
 * The single source of truth is [`version.py`](version.py).
@@ -60,8 +60,8 @@ Run the complete local validation pipeline with:
 The pipeline creates or reuses `.venv` with Python 3.12 or newer, installs the project with development dependencies, checks the runtime version, runs Pylint, runs the unit tests with coverage, generates `htmlcov/index.html`, builds source and wheel distributions, installs the freshly built wheel, and verifies the installed package version.
 
 ## Handling errors
-* Sometimes, the chosen backend for translation, Google, may fail to start in approximately 20% of the runs. If this occurs, you can press Ctrl+C to stop the execution and retry the translation.
-* Yandex and DeepL were also quite powerful, but I quickly ran into rate limits with them (watch the output).
+* The tool uses unofficial web translation backends through `translators`, so backend availability can still change. If one backend fails, CuteLingoExpress automatically tries the next backend in the configured fallback chain.
+* Rate limits and regional backend availability can still affect long runs. If all configured backends fail, the command stops with the collected backend errors.
 
 ## Checking results
 * To assess the translated content, it is recommended to use the diff command from your preferred version-control system. This allows you to compare the changes made in the `.ts` file and verify the accuracy of the translations.
@@ -82,10 +82,11 @@ python test_auto_trans.py                                                       
 .TS file transformed successfully.
 .TS file transformed successfully.
 .TS file transformed successfully.
-.translateString: 0.0s : Hello world -> 你好世界 (en -> cn)
+.translateString[google]: 0.0s : Hello world -> 你好世界 (en -> cn)
+.translateString[bing]: 0.0s : Hello world -> 你好世界 (en -> cn)
 ......
 ----------------------------------------------------------------------
-Ran 33 tests in 0.037s
+Ran 35 tests in 0.038s
 
 OK
 ```
@@ -98,14 +99,14 @@ OK
 python -m coverage report -m
 Name            Stmts   Miss Branch BrPart    Cover   Missing
 -------------------------------------------------------------
-auto_trans.py     154      0     34      0  100.00%
+auto_trans.py     167      0     36      0  100.00%
 version.py          5      0      0      0  100.00%
 -------------------------------------------------------------
-TOTAL             159      0     34      0  100.00%
+TOTAL             172      0     36      0  100.00%
 ```
 
 ### Linting
-* `pylint` gives it a rating of 10.00/10 with release v0.2.8.
+* `pylint` gives it a rating of 10.00/10 with release v0.2.9.
 * Run `python -m pylint auto_trans.py test_auto_trans.py version.py` to lint the Python modules.
 ```sh
 python -m pylint auto_trans.py test_auto_trans.py version.py                                                               ✔  CuteLingoExpress  
