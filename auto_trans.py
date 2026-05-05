@@ -10,7 +10,6 @@ import importlib
 import re
 import time
 import xml.etree.ElementTree
-from contextlib import contextmanager
 from xml.sax.saxutils import escape
 
 from version import VERSION, get_startup_banner
@@ -40,37 +39,6 @@ class TranslationBackendError(RuntimeError):
     """
     Raised when all configured translation backends fail for a source string.
     """
-
-
-@contextmanager
-def preserve_xml_text_entities():
-    """
-    Temporarily configure ElementTree to serialize quote characters in text
-    nodes as XML entities so Qt TS files keep their original escaping style.
-    """
-    original_escape_cdata = getattr(xml.etree.ElementTree, "_escape_cdata")
-
-    def escape_cdata_with_entities(text):
-        return (
-            original_escape_cdata(text)
-            .replace('"', '&quot;')
-            .replace("'", '&apos;')
-        )
-
-    setattr(xml.etree.ElementTree, "_escape_cdata", escape_cdata_with_entities)
-    try:
-        yield
-    finally:
-        setattr(xml.etree.ElementTree, "_escape_cdata", original_escape_cdata)
-
-
-def write_ts_tree(tree, ts_file_path):
-    """
-    Write a Qt TS file while preserving quote entities in text content to avoid
-    noisy diffs.
-    """
-    with preserve_xml_text_entities():
-        tree.write(ts_file_path, encoding='utf-8', xml_declaration=True)
 
 
 def escape_ts_text(text, preserve_double_quotes=False, preserve_single_quotes=False):
@@ -222,23 +190,6 @@ def get_help_text() -> str:
         "  python auto_trans.py testing/helloworld.ts en cn\n"
         "  python auto_trans.py --help\n"
     )
-
-
-def replace_first_lines(file_path):
-    """
-    Replace the first two lines of a file with the XML declaration and DOCTYPE.
-
-    :param file_path: The path to the file to modify.
-    :type file_path: str
-    """
-    with open(file_path, 'r+', encoding='utf-8') as file:
-        lines = file.readlines()
-        lines[0] = '<?xml version="1.0" encoding="utf-8"?>\n'
-        lines.insert(1, '<!DOCTYPE TS>\n')
-
-        file.seek(0)
-        file.writelines(lines)
-        file.truncate()
 
 
 def translate_string(source_string: str, source_language: str, target_language: str) -> str:
