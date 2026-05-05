@@ -5,6 +5,7 @@ set -o pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_DIR="${ROOT_DIR}/.venv"
 PYTHON="${VENV_DIR}/bin/python"
+CUTELINGOEXPRESS="${VENV_DIR}/bin/cutelingoexpress"
 PIPELINE_LOG_DIR="${TMPDIR:-/tmp}/CuteLingoExpress-pipeline-$$"
 trap 'rm -rf "${PIPELINE_LOG_DIR}"' EXIT
 
@@ -36,7 +37,7 @@ Local project pipeline:
   1. Create or reuse .venv
   2. Verify that .venv uses Python 3.12 or newer
   3. Install the project with development dependencies from pyproject.toml
-  4. Verify the runtime version command
+  4. Verify the installed runtime command
   5. Run Pylint static analysis
   6. Run unittest with coverage and generate htmlcov/index.html
   7. Remove stale package build artifacts
@@ -181,7 +182,7 @@ verify_runtime_version() {
     log "Verifying runtime version command."
     local version_output
 
-    version_output="$("${PYTHON}" "${ROOT_DIR}/auto_trans.py" --version)"
+    version_output="$("${CUTELINGOEXPRESS}" --version)"
     printf '%s\n' "${version_output}"
 
     if [[ "${version_output}" == "CuteLingoExpress "* ]]; then
@@ -306,7 +307,7 @@ main() {
     if [[ "${INSTALL_OK}" -eq 1 ]]; then
         if verify_runtime_version; then
             VERSION_OK=1
-            mark_result "Version" "PASS" "auto_trans.py --version completed"
+            mark_result "Version" "PASS" "cutelingoexpress --version completed"
         else
             mark_result "Version" "FAIL" "Unexpected version command output"
         fi

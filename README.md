@@ -16,22 +16,38 @@ Internationalization plays a crucial role in developing successful applications,
 # Usage
 
 ## Setup
-To use CuteLingoExpress, install the required package with:
-`python -m pip install .`
+The project requires Python 3.12 or newer. Dependencies are pinned in [`pyproject.toml`](pyproject.toml), including `translators==6.0.4`; there are no `requirements.txt` files.
 
-The project requires Python 3.12 or newer. Dependencies are pinned in [`pyproject.toml`](pyproject.toml), including `translators==6.0.4`.
+For local development, create the virtual environment and install the package with development dependencies:
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -e ".[dev]"
+```
+
+For normal local use without development tools, install the package into your active environment:
+```sh
+python -m pip install .
+```
 
 ## Invocation
-CuteLingoExpress is invoked by providing the path to the `.ts` file that needs translation and the ISO 639-1 language codes for the source and target languages. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. Translation requests use a fallback chain of `google -> bing -> myMemory` with a per-backend timeout. The following examples demonstrate the usage:
+CuteLingoExpress is invoked by providing the path to the `.ts` file that needs translation and the ISO 639-1 language codes for the source and target languages. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. Translation requests use a fallback chain of `google -> bing -> myMemory` with a per-backend timeout.
+
+After setup or a successful local pipeline run, use the installed command from `.venv`:
 ```shell
-python auto_trans.py testing/numerus.ts de cn
-python auto_trans.py testing/helloworld.ts en cn
-python auto_trans.py --version
+.venv/bin/cutelingoexpress testing/numerus.ts de cn
+.venv/bin/cutelingoexpress testing/helloworld.ts en cn
+.venv/bin/cutelingoexpress --version
 ```
+
+Running the source file directly still works when you are in the repository:
+```shell
+.venv/bin/python auto_trans.py testing/helloworld.ts en cn
+```
+
 Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
 ```shell
-$ python auto_trans.py testing/helloworld.ts en cn
-CuteLingoExpress 0.2.12
+$ .venv/bin/cutelingoexpress testing/helloworld.ts en cn
+CuteLingoExpress 0.2.13
 Using Germany server backend.
 translateString[google]: 0.5s : Hello world! -> 你好世界！ (en -> cn)
 translateString[google]: 1.0s : My first dish. -> 我的第一道菜。 (en -> cn)
@@ -42,13 +58,13 @@ Overall runtime: 3.1s
 
 ## Versioning
 CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).  
-Current version is v0.2.12 (see Git tag).
+Current version is v0.2.13 (see Git tag).
 
 The version is actively used across the lifecycle:
 * The single source of truth is [`version.py`](version.py).
 * Runtime code imports that version and prints it as the very first console output on startup.
 * Build metadata reads the same value through [`pyproject.toml`](pyproject.toml), so packaging and runtime stay aligned.
-* `python auto_trans.py --version` provides a lightweight way to surface the current release during debugging and support.
+* `cutelingoexpress --version` provides a lightweight way to surface the current release during debugging and support.
 * Runtime, build-system, and development dependencies are pinned in [`pyproject.toml`](pyproject.toml), including the `dev` extra for local checks.
 
 ## Local pipeline
@@ -58,6 +74,33 @@ Run the complete local validation pipeline with:
 ```
 
 The pipeline creates or reuses `.venv` with Python 3.12 or newer, installs the project with development dependencies, checks the runtime version, runs Pylint, runs the unit tests with coverage, generates `htmlcov/index.html`, builds source and wheel distributions, installs the freshly built wheel, and verifies the installed package version.
+
+`--noRun` is accepted for compatibility with other projects, but CuteLingoExpress has no long-running application launch stage:
+```sh
+./localPipeline.sh --noRun
+```
+
+After the pipeline succeeds, the built wheel is installed into `.venv`, so real translation work can be started with:
+```sh
+.venv/bin/cutelingoexpress path/to/file.ts source_lang target_lang
+```
+
+The final section of a successful pipeline run should look like this:
+```text
+========== Local Pipeline Summary ==========
+Virtualenv       : PASS .venv is available
+Python           : PASS Python 3.14.4
+Dependencies     : PASS Editable install with dev dependencies completed
+Version          : PASS cutelingoexpress --version completed
+Pylint           : PASS 10.00/10 (100%)
+Tests+Coverage   : PASS Ran 32 tests in 0.035s; TOTAL             151      0     36      0  100.00%
+Clean Build      : PASS Stale package artifacts removed
+Package Build    : PASS Successfully built cutelingoexpress-0.2.13.tar.gz and cutelingoexpress-0.2.13-py3-none-any.whl
+Wheel            : PASS cutelingoexpress-0.2.13-py3-none-any.whl
+Wheel Install    : PASS Built wheel installed into .venv
+Import Check     : PASS 0.2.13
+============================================
+```
 
 ## Handling errors
 * The tool uses unofficial web translation backends through `translators`, so backend availability can still change. If one backend fails, CuteLingoExpress automatically tries the next backend in the configured fallback chain.
@@ -106,7 +149,7 @@ TOTAL             151      0     36      0  100.00%
 ```
 
 ### Linting
-* `pylint` gives it a rating of 10.00/10 with release v0.2.12.
+* `pylint` gives it a rating of 10.00/10 with release v0.2.13.
 * Run `python -m pylint auto_trans.py test_auto_trans.py version.py` to lint the Python modules.
 ```sh
 python -m pylint auto_trans.py test_auto_trans.py version.py                                                               ✔  CuteLingoExpress  

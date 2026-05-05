@@ -20,6 +20,9 @@ dev = [
   "pylint==4.0.5",
 ]
 
+[project.scripts]
+cutelingoexpress = "auto_trans:main"
+
 [tool.setuptools]
 py-modules = ["auto_trans", "version"]
 
