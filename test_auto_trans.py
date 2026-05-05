@@ -10,7 +10,6 @@ import unittest
 from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
-from xml.etree import ElementTree
 
 import auto_trans
 from version import VERSION, get_startup_banner, get_version
@@ -40,14 +39,6 @@ class VersionTests(unittest.TestCase):
 
 class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public-methods
     """Tests for standalone helper functions in auto_trans."""
-
-    @patch("builtins.open", new_callable=MagicMock)
-    def test_replace_first_lines(self, mock_open):
-        """
-        Test that replace_first_lines replaces the first two lines of a file correctly.
-        """
-        auto_trans.replace_first_lines("fakepath")
-        mock_open.assert_called_with("fakepath", 'r+', encoding='utf-8')
 
     @patch("auto_trans.time.time", side_effect=[10.0, 10.01])
     def test_translate_string(self, _mock_time):
@@ -146,52 +137,6 @@ class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public
         self.assertIn("Translate unfinished entries in a Qt .ts file in place.", help_text)
         self.assertIn("Usage: python auto_trans.py", help_text)
         self.assertIn("python auto_trans.py testing/helloworld.ts en cn", help_text)
-
-    def test_write_ts_tree_preserves_quoted_entities_in_text(self):
-        """
-        Test that Qt HTML snippets keep ``&quot;`` instead of being normalized to ``"``.
-        """
-        tree = ElementTree.ElementTree(ElementTree.Element("TS"))
-        message = ElementTree.SubElement(tree.getroot(), "message")
-        source = ElementTree.SubElement(message, "source")
-        translation = ElementTree.SubElement(message, "translation")
-        html = (
-            '<html><body><p><span style=" font-weight:600;">%1 </span>'
-            'is requesting access</p></body></html>'
-        )
-        source.text = html
-        translation.text = html
-
-        with tempfile.NamedTemporaryFile("r+", encoding="utf-8", suffix=".ts") as temp_file:
-            auto_trans.write_ts_tree(tree, temp_file.name)
-            temp_file.seek(0)
-            written_content = temp_file.read()
-
-        self.assertIn("style=&quot; font-weight:600;&quot;", written_content)
-        self.assertNotIn('style=" font-weight:600;"', written_content)
-
-    def test_write_ts_tree_preserves_apostrophe_entities_in_text(self):
-        """
-        Test that apostrophes stay encoded as ``&apos;`` in Qt TS text content.
-        """
-        tree = ElementTree.ElementTree(ElementTree.Element("TS"))
-        message = ElementTree.SubElement(tree.getroot(), "message")
-        source = ElementTree.SubElement(message, "source")
-        translation = ElementTree.SubElement(message, "translation")
-        text = 'Entry\'s "%1" attribute copied to the clipboard!'
-        source.text = text
-        translation.text = text
-
-        with tempfile.NamedTemporaryFile("r+", encoding="utf-8", suffix=".ts") as temp_file:
-            auto_trans.write_ts_tree(tree, temp_file.name)
-            temp_file.seek(0)
-            written_content = temp_file.read()
-
-        self.assertIn(
-            "Entry&apos;s &quot;%1&quot; attribute copied to the clipboard!",
-            written_content,
-        )
-        self.assertNotIn('Entry\'s "%1" attribute copied to the clipboard!', written_content)
 
     @patch("auto_trans.translate_string", return_value='Er sagte "Hallo"')
     def test_transform_ts_file_preserves_untouched_source_entities(self, mock_translate_string):
