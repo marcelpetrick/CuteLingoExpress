@@ -18,7 +18,8 @@ from version import VERSION, get_startup_banner
 
 __version__ = VERSION
 PROJECT_URL = "https://github.com/marcelpetrick/CuteLingoExpress"
-TRANSLATION_BACKEND = "google"
+TRANSLATION_BACKENDS = ("google", "bing", "myMemory")
+TRANSLATION_TIMEOUT_SECONDS = 20.0
 
 MESSAGE_PATTERN = re.compile(r'(<message\b[^>]*>.*?</message>)', re.DOTALL)
 SOURCE_PATTERN = re.compile(r'<source>(.*?)</source>', re.DOTALL)
@@ -33,6 +34,12 @@ NUMERUS_FORM_PATTERN = re.compile(
     r'(<numerusform\b[^>]*>)(.*?)(</numerusform>)',
     re.DOTALL,
 )
+
+
+class TranslationBackendError(RuntimeError):
+    """
+    Raised when all configured translation backends fail for a source string.
+    """
 
 
 @contextmanager
@@ -249,14 +256,58 @@ def translate_string(source_string: str, source_language: str, target_language: 
     """
     start_time = time.time()
     translators = importlib.import_module("translators")
-    output = translators.google(source_string, source_language, target_language)
+    output, backend = translate_with_configured_backends(
+        translators,
+        source_string,
+        source_language,
+        target_language,
+    )
     print(
-        f"translateString: {format_duration_seconds(time.time() - start_time)} : "
+        f"translateString[{backend}]: {format_duration_seconds(time.time() - start_time)} : "
         f"{source_string} -> {output} "
         f"({source_language} -> {target_language})"
     )
 
     return output
+
+
+def translate_with_configured_backends(
+    translators,
+    source_string,
+    source_language,
+    target_language,
+):
+    """
+    Try the configured translator backends in order and return the first result.
+    """
+    failures = []
+    for backend in TRANSLATION_BACKENDS:
+        try:
+            return (
+                translators.translate_text(
+                    source_string,
+                    translator=backend,
+                    from_language=source_language,
+                    to_language=target_language,
+                    timeout=TRANSLATION_TIMEOUT_SECONDS,
+                ),
+                backend,
+            )
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            failures.append(f"{backend}: {error}")
+
+    joined_failures = "; ".join(failures)
+    raise TranslationBackendError(
+        f"All translation backends failed for {source_language} -> {target_language}: "
+        f"{joined_failures}"
+    )
+
+
+def format_translation_backends():
+    """
+    Return a human-readable backend fallback chain.
+    """
+    return " -> ".join(TRANSLATION_BACKENDS)
 
 
 def format_duration_seconds(seconds):
@@ -403,7 +454,7 @@ def main():
                 'version': VERSION,
                 'source_language': source_language,
                 'target_language': target_language,
-                'backend': TRANSLATION_BACKEND,
+                'backend': format_translation_backends(),
                 'messages_scanned': transform_stats['messages_scanned'],
                 'unfinished_before': transform_stats['unfinished_before'],
                 'translated_count': transform_stats['translated_count'],
@@ -423,9 +474,9 @@ if __name__ == "__main__":
 # python auto_trans.py testing/helloworld.ts en cn
 #
 # Using Germany server backend.
-# translateString: 1.3s : Hello world! -> 你好世界！ (en -> cn)
-# translateString: 1.9s : My first dish. -> 我的第一道菜。 (en -> cn)
-# translateString: 2.1s : white bread with butter -> 白面包和黄油 (en -> cn)
+# translateString[google]: 1.3s : Hello world! -> 你好世界！ (en -> cn)
+# translateString[google]: 1.9s : My first dish. -> 我的第一道菜。 (en -> cn)
+# translateString[google]: 2.1s : white bread with butter -> 白面包和黄油 (en -> cn)
 # TS file transformed successfully.
 # Overall runtime: 5.4s
 # (venv) [mpetrick@marcel-precision3551 AutoTrans]$
