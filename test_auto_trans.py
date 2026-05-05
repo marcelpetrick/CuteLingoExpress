@@ -49,7 +49,8 @@ class HelperFunctionTests(unittest.TestCase):
         auto_trans.replace_first_lines("fakepath")
         mock_open.assert_called_with("fakepath", 'r+', encoding='utf-8')
 
-    def test_translate_string(self):
+    @patch("auto_trans.time.time", side_effect=[10.0, 10.01])
+    def test_translate_string(self, _mock_time):
         """
         Test that translate_string calls the appropriate translation function
         and returns the correct result.
@@ -61,6 +62,32 @@ class HelperFunctionTests(unittest.TestCase):
 
         self.assertEqual(result, "你好世界")
         mock_google.assert_called_once_with("Hello world", "en", "cn")
+
+    @patch("auto_trans.time.time", side_effect=[20.0, 22.345656356])
+    @patch("builtins.print")
+    def test_translate_string_truncates_duration_to_one_decimal(
+        self,
+        mock_print,
+        _mock_time,
+    ):
+        """
+        Test that translation timing output does not expose noisy precision.
+        """
+        mock_google = MagicMock(return_value="你好世界")
+
+        with patch.dict("sys.modules", {"translators": SimpleNamespace(google=mock_google)}):
+            auto_trans.translate_string("Hello world", "en", "cn")
+
+        mock_print.assert_called_once_with(
+            "translateString: 2.3s : Hello world -> 你好世界 (en -> cn)"
+        )
+
+    def test_format_duration_seconds_truncates_to_one_decimal(self):
+        """
+        Test that duration formatting cuts extra precision instead of rounding.
+        """
+        self.assertEqual(auto_trans.format_duration_seconds(2.345656356), "2.3s")
+        self.assertEqual(auto_trans.format_duration_seconds(0.01), "0.0s")
 
     def test_help_text_contains_description_and_example(self):
         """
@@ -247,7 +274,52 @@ class HelperFunctionTests(unittest.TestCase):
 
     def test_replace_translation_in_message_handles_numerus_entries(self):
         """
-        Test that numerus messages receive two translated numerusform entries.
+        Test that numerus messages fill the existing numerusform entries.
+        """
+        message_block = """    <message numerus="yes">
+        <source>%n file(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>"""
+
+        updated_block = auto_trans.replace_translation_in_message(
+            message_block,
+            "%n Datei(en)",
+            numerus=True,
+        )
+
+        self.assertIn("<numerusform>%n Datei(en)</numerusform>", updated_block)
+        self.assertEqual(updated_block.count("<numerusform>"), 2)
+        self.assertNotIn('type="unfinished"', updated_block)
+
+    def test_replace_translation_in_message_preserves_numerusform_count(self):
+        """
+        Test that Qt numerus translations keep their language-specific form count.
+        """
+        message_block = """    <message numerus="yes">
+        <source>%n file(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>"""
+
+        updated_block = auto_trans.replace_translation_in_message(
+            message_block,
+            "%n Datei(en)",
+            numerus=True,
+        )
+
+        self.assertEqual(updated_block.count("<numerusform>%n Datei(en)</numerusform>"), 3)
+        self.assertEqual(updated_block.count("<numerusform>"), 3)
+        self.assertNotIn('type="unfinished"', updated_block)
+
+    def test_replace_translation_in_message_creates_single_numerusform_fallback(self):
+        """
+        Test the defensive fallback for malformed numerus messages without slots.
         """
         message_block = """    <message numerus="yes">
         <source>%n file(s)</source>
@@ -260,8 +332,7 @@ class HelperFunctionTests(unittest.TestCase):
             numerus=True,
         )
 
-        self.assertIn("<numerusform>%n Datei(en)</numerusform>", updated_block)
-        self.assertEqual(updated_block.count("<numerusform>"), 2)
+        self.assertEqual(updated_block.count("<numerusform>%n Datei(en)</numerusform>"), 1)
         self.assertNotIn('type="unfinished"', updated_block)
 
     def test_update_ts_content_raises_when_message_count_changes(self):
@@ -308,8 +379,8 @@ class HelperFunctionTests(unittest.TestCase):
                 "translated_count": 5,
                 "numerus_translated_count": 2,
                 "skipped_count": 2,
-                "average_translation_seconds": 0.5,
-                "runtime_seconds": 2.5,
+                "average_translation_seconds": 0.567,
+                "runtime_seconds": 2.567,
             }
         )
 
@@ -452,7 +523,10 @@ class TransformTsFileTests(unittest.TestCase):
     <name>Example</name>
     <message numerus="yes">
         <source>%n file(s)</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
     </message>
 </context>
 </TS>
@@ -589,7 +663,7 @@ class CliTests(unittest.TestCase):
             "translated_count": 4,
             "numerus_translated_count": 1,
             "skipped_count": 0,
-            "average_translation_seconds": 0.4,
+            "average_translation_seconds": 0.456,
         },
     )
     @patch("sys.argv", ["auto_trans.py", "testing/helloworld.ts", "en", "de"])

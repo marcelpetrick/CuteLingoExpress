@@ -29,6 +29,10 @@ TRANSLATION_PATTERN = re.compile(
     ),
     re.DOTALL | re.MULTILINE,
 )
+NUMERUS_FORM_PATTERN = re.compile(
+    r'(<numerusform\b[^>]*>)(.*?)(</numerusform>)',
+    re.DOTALL,
+)
 
 
 @contextmanager
@@ -107,21 +111,11 @@ def replace_translation_in_message(message_block, translated_text, numerus):
     )
 
     if numerus:
-        numerusform_indent_match = re.search(
-            r'^[ \t]*(?=<numerusform>)',
+        replacement = replace_numerus_translation(
+            translation_indent,
+            updated_attributes,
             inner_content,
-            re.MULTILINE,
-        )
-        numerusform_indent = (
-            numerusform_indent_match.group(0)
-            if numerusform_indent_match is not None
-            else f"{translation_indent}    "
-        )
-        replacement = (
-            f"{translation_indent}<translation{updated_attributes}>\n"
-            f"{numerusform_indent}<numerusform>{escaped_translation}</numerusform>\n"
-            f"{numerusform_indent}<numerusform>{escaped_translation}</numerusform>\n"
-            f"{translation_indent}</translation>"
+            escaped_translation,
         )
     else:
         replacement = (
@@ -133,6 +127,44 @@ def replace_translation_in_message(message_block, translated_text, numerus):
         message_block[:translation_match.start()]
         + replacement
         + message_block[translation_match.end():]
+    )
+
+
+def replace_numerus_translation(
+    translation_indent,
+    updated_attributes,
+    inner_content,
+    escaped_translation,
+):
+    """
+    Fill existing Qt numerusform slots without changing their count.
+
+    Qt TS plural form counts depend on the target language. The TS file usually
+    already carries the right number of ``numerusform`` elements, so keep that
+    structure and place the translated text into each existing slot.
+    """
+    numerus_matches = list(NUMERUS_FORM_PATTERN.finditer(inner_content))
+    if not numerus_matches:
+        numerusform_indent = f"{translation_indent}    "
+        return (
+            f"{translation_indent}<translation{updated_attributes}>\n"
+            f"{numerusform_indent}<numerusform>{escaped_translation}</numerusform>\n"
+            f"{translation_indent}</translation>"
+        )
+
+    updated_parts = []
+    last_index = 0
+    for numerus_match in numerus_matches:
+        updated_parts.append(inner_content[last_index:numerus_match.start()])
+        updated_parts.append(
+            f"{numerus_match.group(1)}{escaped_translation}{numerus_match.group(3)}"
+        )
+        last_index = numerus_match.end()
+    updated_parts.append(inner_content[last_index:])
+
+    return (
+        f"{translation_indent}<translation{updated_attributes}>"
+        f"{''.join(updated_parts)}</translation>"
     )
 
 
@@ -219,11 +251,19 @@ def translate_string(source_string: str, source_language: str, target_language: 
     translators = importlib.import_module("translators")
     output = translators.google(source_string, source_language, target_language)
     print(
-        f"translateString: {time.time() - start_time}s : {source_string} -> {output} "
+        f"translateString: {format_duration_seconds(time.time() - start_time)} : "
+        f"{source_string} -> {output} "
         f"({source_language} -> {target_language})"
     )
 
     return output
+
+
+def format_duration_seconds(seconds):
+    """
+    Format elapsed seconds with one decimal place, truncating extra precision.
+    """
+    return f"{int(seconds * 10) / 10:.1f}s"
 
 
 def format_run_summary(summary):
@@ -241,8 +281,9 @@ def format_run_summary(summary):
         f"Translated strings: {summary['translated_count']}\n"
         f"Numerus translations: {summary['numerus_translated_count']}\n"
         f"Skipped strings: {summary['skipped_count']}\n"
-        f"Average translation time: {summary['average_translation_seconds']}s\n"
-        f"Overall runtime: {summary['runtime_seconds']}s"
+        "Average translation time: "
+        f"{format_duration_seconds(summary['average_translation_seconds'])}\n"
+        f"Overall runtime: {format_duration_seconds(summary['runtime_seconds'])}"
     )
 
 
@@ -382,11 +423,11 @@ if __name__ == "__main__":
 # python auto_trans.py testing/helloworld.ts en cn
 #
 # Using Germany server backend.
-# translateString: 1.3896245956420898s : Hello world! -> 你好世界！ (en -> cn)
-# translateString: 1.9492523670196533s : My first dish. -> 我的第一道菜。 (en -> cn)
-# translateString: 2.112003803253174s : white bread with butter -> 白面包和黄油 (en -> cn)
+# translateString: 1.3s : Hello world! -> 你好世界！ (en -> cn)
+# translateString: 1.9s : My first dish. -> 我的第一道菜。 (en -> cn)
+# translateString: 2.1s : white bread with butter -> 白面包和黄油 (en -> cn)
 # TS file transformed successfully.
-# Whole execution took 5.453961610794067s.
+# Overall runtime: 5.4s
 # (venv) [mpetrick@marcel-precision3551 AutoTrans]$
 
 # Manual test commands:
