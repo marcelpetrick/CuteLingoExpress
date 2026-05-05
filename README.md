@@ -19,7 +19,7 @@ Internationalization plays a crucial role in developing successful applications,
 To use CuteLingoExpress, install the required package with:
 `python -m pip install .`
 
-The project is configured through [`pyproject.toml`](pyproject.toml) and currently pins `translators==5.3.1`.
+The project requires Python 3.12 or newer. Dependencies are pinned in [`pyproject.toml`](pyproject.toml), including `translators==6.0.4`.
 
 ## Invocation
 CuteLingoExpress is invoked by providing the path to the `.ts` file that needs translation and the ISO 639-1 language codes for the source and target languages. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. The following examples demonstrate the usage:
@@ -31,7 +31,7 @@ python auto_trans.py --version
 Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
 ```shell
 $ python auto_trans.py testing/helloworld.ts en cn
-CuteLingoExpress 0.2.5
+CuteLingoExpress 0.2.6
 Using Germany server backend.
 translateString: 0.5832037925720215s : Hello world! -> 你好世界！ (en -> cn)
 translateString: 1.0015525817871094s : My first dish. -> 我的第一道菜。 (en -> cn)
@@ -42,14 +42,14 @@ Whole execution took 3.1223082542419434s.
 
 ## Versioning
 CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).  
-Current version is v0.2.5 (see Git tag).
+Current version is v0.2.6 (see Git tag).
 
 The version is actively used across the lifecycle:
 * The single source of truth is [`version.py`](version.py).
 * Runtime code imports that version and prints it as the very first console output on startup.
 * Build metadata reads the same value through [`pyproject.toml`](pyproject.toml), so packaging and runtime stay aligned.
 * `python auto_trans.py --version` provides a lightweight way to surface the current release during debugging and support.
-* Runtime and development dependencies are declared in [`pyproject.toml`](pyproject.toml), including the `dev` extra for local checks.
+* Runtime, build-system, and development dependencies are pinned in [`pyproject.toml`](pyproject.toml), including the `dev` extra for local checks.
 
 ## Local pipeline
 Run the complete local validation pipeline with:
@@ -57,7 +57,7 @@ Run the complete local validation pipeline with:
 ./localPipeline.sh
 ```
 
-The pipeline creates or reuses `.venv`, installs the project with development dependencies, checks the runtime version, runs Pylint, runs the unit tests with coverage, generates `htmlcov/index.html`, builds source and wheel distributions, installs the freshly built wheel, and verifies the installed package version.
+The pipeline creates or reuses `.venv` with Python 3.12 or newer, installs the project with development dependencies, checks the runtime version, runs Pylint, runs the unit tests with coverage, generates `htmlcov/index.html`, builds source and wheel distributions, installs the freshly built wheel, and verifies the installed package version.
 
 ## Handling errors
 * Sometimes, the chosen backend for translation, Google, may fail to start in approximately 20% of the runs. If this occurs, you can press Ctrl+C to stop the execution and retry the translation.
@@ -105,7 +105,7 @@ TOTAL             145      0     30      0  100.00%
 ```
 
 ### Linting
-* `pylint` gives it a rating of 10.00/10 with release v0.2.5.
+* `pylint` gives it a rating of 10.00/10 with release v0.2.6.
 * Run `python -m pylint auto_trans.py test_auto_trans.py version.py` to lint the Python modules.
 ```sh
 python -m pylint auto_trans.py test_auto_trans.py version.py                                                               ✔  CuteLingoExpress  
