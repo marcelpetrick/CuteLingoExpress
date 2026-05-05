@@ -31,7 +31,7 @@ python auto_trans.py --version
 Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
 ```shell
 $ python auto_trans.py testing/helloworld.ts en cn
-CuteLingoExpress 0.2.4
+CuteLingoExpress 0.2.5
 Using Germany server backend.
 translateString: 0.5832037925720215s : Hello world! -> 你好世界！ (en -> cn)
 translateString: 1.0015525817871094s : My first dish. -> 我的第一道菜。 (en -> cn)
@@ -42,7 +42,7 @@ Whole execution took 3.1223082542419434s.
 
 ## Versioning
 CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).  
-Current version is v0.2.4 (see Git tag).
+Current version is v0.2.5 (see Git tag).
 
 The version is actively used across the lifecycle:
 * The single source of truth is [`version.py`](version.py).
@@ -105,7 +105,7 @@ TOTAL             145      0     30      0  100.00%
 ```
 
 ### Linting
-* `pylint` gives it a rating of 10.00/10 with release v0.2.4.
+* `pylint` gives it a rating of 10.00/10 with release v0.2.5.
 * Run `python -m pylint auto_trans.py test_auto_trans.py version.py` to lint the Python modules.
 ```sh
 python -m pylint auto_trans.py test_auto_trans.py version.py                                                               ✔  CuteLingoExpress  
@@ -117,3 +117,6 @@ Your code has been rated at 10.00/10 (previous run: 10.00/10, +0.00)
 # Naming?
 * The name "CuteLingoExpress" combines elements from different aspects of the tool to convey its purpose and characteristics. It blends "cute" from Qt, "lingo" representing the language translation aspect, and "express" to emphasize the tool's speed and efficiency in translating Qt content. This name reflects the tool's goal of delivering delightful and rapid translations while capturing the essence of the Qt framework.
 * The development of CuteLingoExpress involved applying design-thinking methods and using GPT to refine the translation workflow and overall user experience.
+
+## License
+CuteLingoExpress is licensed under the GNU General Public License v3.0. See [`LICENSE`](LICENSE).
