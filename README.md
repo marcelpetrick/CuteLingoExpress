@@ -17,9 +17,9 @@ Internationalization plays a crucial role in developing successful applications,
 
 ## Setup
 To use CuteLingoExpress, install the required package with:
-`pip install -r requirements.txt`
+`python -m pip install .`
 
-The project is currently pinned to `translators==5.3.1`.
+The project is configured through [`pyproject.toml`](pyproject.toml) and currently pins `translators==5.3.1`.
 
 ## Invocation
 CuteLingoExpress is invoked by providing the path to the `.ts` file that needs translation and the ISO 639-1 language codes for the source and target languages. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. The following examples demonstrate the usage:
@@ -31,7 +31,7 @@ python auto_trans.py --version
 Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
 ```shell
 $ python auto_trans.py testing/helloworld.ts en cn
-CuteLingoExpress 0.2.2
+CuteLingoExpress 0.2.3
 Using Germany server backend.
 translateString: 0.5832037925720215s : Hello world! -> 你好世界！ (en -> cn)
 translateString: 1.0015525817871094s : My first dish. -> 我的第一道菜。 (en -> cn)
@@ -42,13 +42,14 @@ Whole execution took 3.1223082542419434s.
 
 ## Versioning
 CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).  
-Current version is v0.2.2 (see Git tag).
+Current version is v0.2.3 (see Git tag).
 
 The version is actively used across the lifecycle:
 * The single source of truth is [`version.py`](version.py).
 * Runtime code imports that version and prints it as the very first console output on startup.
 * Build metadata reads the same value through [`pyproject.toml`](pyproject.toml), so packaging and runtime stay aligned.
 * `python auto_trans.py --version` provides a lightweight way to surface the current release during debugging and support.
+* Runtime and development dependencies are declared in [`pyproject.toml`](pyproject.toml), including the `dev` extra for local checks.
 
 ## Handling errors
 * Sometimes, the chosen backend for translation, Google, may fail to start in approximately 20% of the runs. If this occurs, you can press Ctrl+C to stop the execution and retry the translation.
@@ -81,7 +82,7 @@ Ran 28 tests in 0.019s
 OK
 ```
 
-* To generate coverage for the unit tests, install the development dependencies with `pip install -r requirements-dev.txt`.
+* To generate coverage for the unit tests, install the development dependencies with `python -m pip install -e ".[dev]"`.
 * Run `python -m coverage run -m unittest` to execute the full test suite with coverage collection.
 * Run `python -m coverage report -m` to print a line-by-line coverage summary in the terminal.
 * Run `python -m coverage html` to generate an HTML report in `htmlcov/index.html`.
@@ -96,7 +97,7 @@ TOTAL             129      0     30      0  100.00%
 ```
 
 ### Linting
-* `pylint` gives it a rating of 9.97/10 with release v0.2.2.
+* `pylint` gives it a rating of 9.97/10 with release v0.2.3.
 * Run `python -m pylint auto_trans.py test_auto_trans.py version.py` to lint the Python modules.
 ```sh
 python -m pylint auto_trans.py test_auto_trans.py version.py                                                               ✔  CuteLingoExpress  

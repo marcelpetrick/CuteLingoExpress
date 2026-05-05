@@ -13,6 +13,12 @@ dependencies = [
   "translators==5.3.1",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "coverage[toml]>=7.6,<8",
+  "pylint>=3.3,<4",
+]
+
 [tool.setuptools]
 py-modules = ["auto_trans", "version"]
 
