@@ -11,6 +11,7 @@ trap 'rm -rf "${PIPELINE_LOG_DIR}"' EXIT
 declare -a SUMMARY_LINES=()
 
 VENV_OK=0
+PYTHON_VERSION_OK=0
 INSTALL_OK=0
 VERSION_OK=0
 PYLINT_OK=0
@@ -33,15 +34,16 @@ Usage: ./localPipeline.sh [--noRun]
 
 Local project pipeline:
   1. Create or reuse .venv
-  2. Install the project with development dependencies from pyproject.toml
-  3. Verify the runtime version command
-  4. Run Pylint static analysis
-  5. Run unittest with coverage and generate htmlcov/index.html
-  6. Remove stale package build artifacts
-  7. Build source and wheel distributions
-  8. Install the freshly built wheel into .venv
-  9. Verify that the installed package exposes the expected version
-  10. Print a final stage-by-stage summary
+  2. Verify that .venv uses Python 3.12 or newer
+  3. Install the project with development dependencies from pyproject.toml
+  4. Verify the runtime version command
+  5. Run Pylint static analysis
+  6. Run unittest with coverage and generate htmlcov/index.html
+  7. Remove stale package build artifacts
+  8. Build source and wheel distributions
+  9. Install the freshly built wheel into .venv
+  10. Verify that the installed package exposes the expected version
+  11. Print a final stage-by-stage summary
 
 --noRun is accepted for compatibility with other local pipeline scripts. This
 project has no long-running application launch stage, so it currently has no
@@ -165,6 +167,11 @@ prepare_virtual_environment() {
     python3 -m venv "${VENV_DIR}"
 }
 
+verify_python_version() {
+    log "Checking virtual environment Python version."
+    "${PYTHON}" -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 12) else 1)"
+}
+
 install_development_dependencies() {
     log "Installing project with development dependencies."
     "${PYTHON}" -m pip install -e ".[dev]"
@@ -275,6 +282,17 @@ main() {
     fi
 
     if [[ "${VENV_OK}" -eq 1 ]]; then
+        if verify_python_version; then
+            PYTHON_VERSION_OK=1
+            mark_result "Python" "PASS" "$("${PYTHON}" --version)"
+        else
+            mark_result "Python" "FAIL" "Python 3.12 or newer is required"
+        fi
+    else
+        mark_result "Python" "SKIP" "Skipped because .venv is unavailable"
+    fi
+
+    if [[ "${PYTHON_VERSION_OK}" -eq 1 ]]; then
         if install_development_dependencies; then
             INSTALL_OK=1
             mark_result "Dependencies" "PASS" "Editable install with dev dependencies completed"
@@ -282,7 +300,7 @@ main() {
             mark_result "Dependencies" "FAIL" "Dependency installation failed"
         fi
     else
-        mark_result "Dependencies" "SKIP" "Skipped because .venv is unavailable"
+        mark_result "Dependencies" "SKIP" "Skipped because Python 3.12 or newer is unavailable"
     fi
 
     if [[ "${INSTALL_OK}" -eq 1 ]]; then
@@ -369,7 +387,7 @@ main() {
         mark_result "Import Check" "SKIP" "Skipped because wheel install failed"
     fi
 
-    if [[ "${VENV_OK}" -eq 1 && "${INSTALL_OK}" -eq 1 && "${VERSION_OK}" -eq 1 && "${PYLINT_OK}" -eq 1 && "${TESTS_OK}" -eq 1 && "${CLEAN_OK}" -eq 1 && "${BUILD_OK}" -eq 1 && "${WHEEL_OK}" -eq 1 && "${PACKAGE_INSTALL_OK}" -eq 1 && "${IMPORT_OK}" -eq 1 ]]; then
+    if [[ "${VENV_OK}" -eq 1 && "${PYTHON_VERSION_OK}" -eq 1 && "${INSTALL_OK}" -eq 1 && "${VERSION_OK}" -eq 1 && "${PYLINT_OK}" -eq 1 && "${TESTS_OK}" -eq 1 && "${CLEAN_OK}" -eq 1 && "${BUILD_OK}" -eq 1 && "${WHEEL_OK}" -eq 1 && "${PACKAGE_INSTALL_OK}" -eq 1 && "${IMPORT_OK}" -eq 1 ]]; then
         exit_code=0
     fi
 
