@@ -89,16 +89,16 @@ The final section of a successful pipeline run should look like this:
 ```text
 ========== Local Pipeline Summary ==========
 Virtualenv       : PASS .venv is available
-Python           : PASS Python 3.14.4
+Python           : PASS Python 3.14.5
 Dependencies     : PASS Editable install with dev dependencies completed
 Version          : PASS cutelingoexpress --version completed
 Pylint           : PASS 10.00/10 (100%)
-Tests+Coverage   : PASS Ran 32 tests in 0.035s; TOTAL             151      0     36      0  100.00%
+Tests+Coverage   : PASS Ran 32 tests in 0.038s; TOTAL             151      0     36      0  100.00%
 Clean Build      : PASS Stale package artifacts removed
-Package Build    : PASS Successfully built cutelingoexpress-0.2.13.tar.gz and cutelingoexpress-0.2.13-py3-none-any.whl
-Wheel            : PASS cutelingoexpress-0.2.13-py3-none-any.whl
+Package Build    : PASS Successfully built cutelingoexpress-0.2.14.tar.gz and cutelingoexpress-0.2.14-py3-none-any.whl
+Wheel            : PASS cutelingoexpress-0.2.14-py3-none-any.whl
 Wheel Install    : PASS Built wheel installed into .venv
-Import Check     : PASS 0.2.13
+Import Check     : PASS 0.2.14
 ============================================
 ```
 
