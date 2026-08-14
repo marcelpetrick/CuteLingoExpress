@@ -19,6 +19,7 @@ from version import VERSION, get_startup_banner
 __version__ = VERSION
 PROJECT_URL = "https://github.com/marcelpetrick/CuteLingoExpress"
 TRANSLATION_BACKENDS = ("google", "bing", "myMemory")
+AUTO_DETECTION_BACKENDS = frozenset(("google", "bing"))
 TRANSLATION_TIMEOUT_SECONDS = 20.0
 
 MESSAGE_PATTERN = re.compile(r'(<message\b[^>]*>.*?</message>)', re.DOTALL)
@@ -299,6 +300,9 @@ def translate_with_configured_backends(
     """
     failures = []
     for backend in TRANSLATION_BACKENDS:
+        if source_language == 'auto' and backend not in AUTO_DETECTION_BACKENDS:
+            failures.append(f"{backend}: source-language auto detection is unsupported")
+            continue
         try:
             return (
                 translators.translate_text(
@@ -320,11 +324,16 @@ def translate_with_configured_backends(
     )
 
 
-def format_translation_backends():
+def format_translation_backends(source_language=None):
     """
     Return a human-readable backend fallback chain.
     """
-    return " -> ".join(TRANSLATION_BACKENDS)
+    backends = TRANSLATION_BACKENDS
+    if source_language == 'auto':
+        backends = tuple(
+            backend for backend in backends if backend in AUTO_DETECTION_BACKENDS
+        )
+    return " -> ".join(backends)
 
 
 def format_duration_seconds(seconds):
@@ -476,7 +485,7 @@ def main():
                 'version': VERSION,
                 'source_language': source_language,
                 'target_language': target_language,
-                'backend': format_translation_backends(),
+                'backend': format_translation_backends(source_language),
                 'messages_scanned': transform_stats['messages_scanned'],
                 'unfinished_before': transform_stats['unfinished_before'],
                 'translated_count': transform_stats['translated_count'],
