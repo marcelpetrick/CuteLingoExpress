@@ -201,6 +201,19 @@ class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public
             auto_trans.infer_target_language_from_filename("translations/messages.ts")
         )
 
+    def test_infer_source_and_target_languages_from_filename(self):
+        """
+        Test source-target pairs without confusing target locale suffixes.
+        """
+        self.assertEqual(
+            auto_trans.infer_languages_from_filename("translations/app_en_de.ts"),
+            ("en", "de"),
+        )
+        self.assertEqual(
+            auto_trans.infer_languages_from_filename("translations/app_de_DE.ts"),
+            (None, "de"),
+        )
+
     def test_resolve_languages_prefers_explicit_values(self):
         """
         Test that user-provided languages override metadata and filenames.
@@ -236,6 +249,18 @@ class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public
             languages = auto_trans.resolve_languages(ts_path)
 
         self.assertEqual(languages, ("auto", "de"))
+
+    def test_resolve_languages_uses_source_target_filename_pair(self):
+        """
+        Test complete language inference from a filename pair.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ts_path = Path(temp_dir) / "application_en_de.ts"
+            ts_path.write_text('<TS version="2.1"></TS>', encoding="utf-8")
+
+            languages = auto_trans.resolve_languages(ts_path)
+
+        self.assertEqual(languages, ("en", "de"))
 
     def test_resolve_languages_requires_inferable_target(self):
         """

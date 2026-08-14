@@ -38,6 +38,9 @@ NUMERUS_FORM_PATTERN = re.compile(
 FILENAME_LANGUAGE_PATTERN = re.compile(
     r"(?:^|[_.-])(?P<language>[a-z]{2,3})(?:[_-](?P<territory>[A-Z]{2}))?$"
 )
+FILENAME_LANGUAGE_PAIR_PATTERN = re.compile(
+    r"(?:^|[_.-])(?P<source>[a-z]{2})[_.-](?P<target>[a-z]{2,3})$"
+)
 TRANSLATOR_LOCALE_OVERRIDES = {
     "fa_AF": "fa-AF",
     "fr_CA": "fr-CA",
@@ -221,19 +224,32 @@ def normalize_qt_language(language):
     return normalized.split('_', maxsplit=1)[0].lower()
 
 
-def infer_target_language_from_filename(ts_file_path):
+def infer_languages_from_filename(ts_file_path):
     """
-    Infer a target language from a conventional locale suffix in a TS filename.
+    Infer source and target languages from conventional TS filename suffixes.
     """
     filename_stem = Path(ts_file_path).stem
+    pair_match = FILENAME_LANGUAGE_PAIR_PATTERN.search(filename_stem)
+    if pair_match is not None:
+        source_language = normalize_qt_language(pair_match.group('source'))
+        target_language = normalize_qt_language(pair_match.group('target'))
+        return source_language, target_language
+
     match = FILENAME_LANGUAGE_PATTERN.search(filename_stem)
     if match is None:
-        return None
+        return None, None
 
     language = match.group('language')
     territory = match.group('territory')
     qt_locale = f"{language}_{territory}" if territory else language
-    return normalize_qt_language(qt_locale)
+    return None, normalize_qt_language(qt_locale)
+
+
+def infer_target_language_from_filename(ts_file_path):
+    """
+    Return only the inferred target language for callers that need it.
+    """
+    return infer_languages_from_filename(ts_file_path)[1]
 
 
 def resolve_languages(ts_file_path, source_language=None, target_language=None):
@@ -244,12 +260,13 @@ def resolve_languages(ts_file_path, source_language=None, target_language=None):
     detection when the TS file does not declare ``sourcelanguage``.
     """
     root = xml.etree.ElementTree.parse(ts_file_path).getroot()
+    filename_source, filename_target = infer_languages_from_filename(ts_file_path)
     resolved_source = source_language or normalize_qt_language(
         root.attrib.get('sourcelanguage')
-    ) or 'auto'
+    ) or filename_source or 'auto'
     resolved_target = target_language or normalize_qt_language(
         root.attrib.get('language')
-    ) or infer_target_language_from_filename(ts_file_path)
+    ) or filename_target
 
     if resolved_target is None:
         raise ValueError(
