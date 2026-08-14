@@ -10,6 +10,7 @@ import importlib
 import re
 import time
 import xml.etree.ElementTree
+from pathlib import Path
 from xml.sax.saxutils import escape
 
 from version import VERSION, get_startup_banner
@@ -33,6 +34,16 @@ NUMERUS_FORM_PATTERN = re.compile(
     r'(<numerusform\b[^>]*>)(.*?)(</numerusform>)',
     re.DOTALL,
 )
+FILENAME_LANGUAGE_PATTERN = re.compile(
+    r"(?:^|[_.-])(?P<language>[a-z]{2,3})(?:[_-](?P<territory>[A-Z]{2}))?$"
+)
+TRANSLATOR_LOCALE_OVERRIDES = {
+    "fa_AF": "fa-AF",
+    "fr_CA": "fr-CA",
+    "pt_PT": "pt-PT",
+    "zh_CN": "zh-CN",
+    "zh_TW": "zh-TW",
+}
 
 
 class TranslationBackendError(RuntimeError):
@@ -184,12 +195,67 @@ def get_help_text() -> str:
     return (
         "Translate unfinished entries in a Qt .ts file in place.\n"
         "\n"
-        "Usage: python auto_trans.py <ts_file_path> <source_language> <target_language>\n"
+        "Usage: python auto_trans.py <ts_file_path> [source_language] [target_language]\n"
+        "\n"
+        "Languages are read from Qt TS metadata or the filename when omitted.\n"
+        "The source falls back to automatic detection.\n"
         "\n"
         "Examples:\n"
+        "  python auto_trans.py translations/app_de.ts\n"
         "  python auto_trans.py testing/helloworld.ts en cn\n"
         "  python auto_trans.py --help\n"
     )
+
+
+def normalize_qt_language(language):
+    """
+    Convert a Qt locale identifier to a language accepted by the translators.
+    """
+    if not language:
+        return None
+
+    normalized = language.replace('-', '_')
+    if normalized in TRANSLATOR_LOCALE_OVERRIDES:
+        return TRANSLATOR_LOCALE_OVERRIDES[normalized]
+    return normalized.split('_', maxsplit=1)[0].lower()
+
+
+def infer_target_language_from_filename(ts_file_path):
+    """
+    Infer a target language from a conventional locale suffix in a TS filename.
+    """
+    filename_stem = Path(ts_file_path).stem
+    match = FILENAME_LANGUAGE_PATTERN.search(filename_stem)
+    if match is None:
+        return None
+
+    language = match.group('language')
+    territory = match.group('territory')
+    qt_locale = f"{language}_{territory}" if territory else language
+    return normalize_qt_language(qt_locale)
+
+
+def resolve_languages(ts_file_path, source_language=None, target_language=None):
+    """
+    Resolve missing languages from Qt TS metadata and the filename.
+
+    Explicit values take precedence. The source uses backend-supported automatic
+    detection when the TS file does not declare ``sourcelanguage``.
+    """
+    root = xml.etree.ElementTree.parse(ts_file_path).getroot()
+    resolved_source = source_language or normalize_qt_language(
+        root.attrib.get('sourcelanguage')
+    ) or 'auto'
+    resolved_target = target_language or normalize_qt_language(
+        root.attrib.get('language')
+    ) or infer_target_language_from_filename(ts_file_path)
+
+    if resolved_target is None:
+        raise ValueError(
+            "Unable to infer the target language from TS metadata or the filename; "
+            "provide it explicitly."
+        )
+    return resolved_source, resolved_target
 
 
 def translate_string(source_string: str, source_language: str, target_language: str) -> str:
@@ -389,13 +455,18 @@ def main():
         print(get_help_text())
         return
 
-    if len(sys.argv) < 4:
+    if len(sys.argv) > 4:
         print(get_help_text())
         return
 
     ts_file_path = sys.argv[1]
-    source_language = sys.argv[2]
-    target_language = sys.argv[3]
+    explicit_source_language = sys.argv[2] if len(sys.argv) >= 3 else None
+    explicit_target_language = sys.argv[3] if len(sys.argv) == 4 else None
+    source_language, target_language = resolve_languages(
+        ts_file_path,
+        explicit_source_language,
+        explicit_target_language,
+    )
     start_time = time.time()
     transform_stats = transform_ts_file(ts_file_path, source_language, target_language)
     runtime_seconds = time.time() - start_time

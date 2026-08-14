@@ -135,8 +135,83 @@ class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public
         help_text = auto_trans.get_help_text()
 
         self.assertIn("Translate unfinished entries in a Qt .ts file in place.", help_text)
-        self.assertIn("Usage: python auto_trans.py", help_text)
+        self.assertIn(
+            "Usage: python auto_trans.py <ts_file_path> [source_language] [target_language]",
+            help_text,
+        )
+        self.assertIn("Languages are read from Qt TS metadata", help_text)
         self.assertIn("python auto_trans.py testing/helloworld.ts en cn", help_text)
+
+    def test_normalize_qt_language_preserves_supported_locale_variants(self):
+        """
+        Test that generic locales use their language while supported variants survive.
+        """
+        self.assertEqual(auto_trans.normalize_qt_language("de_DE"), "de")
+        self.assertEqual(auto_trans.normalize_qt_language("zh_CN"), "zh-CN")
+        self.assertEqual(auto_trans.normalize_qt_language("fr-CA"), "fr-CA")
+
+    def test_infer_target_language_from_filename(self):
+        """
+        Test conventional language and locale suffixes in TS filenames.
+        """
+        self.assertEqual(
+            auto_trans.infer_target_language_from_filename("translations/app_de.ts"),
+            "de",
+        )
+        self.assertEqual(
+            auto_trans.infer_target_language_from_filename("translations/app_zh_CN.ts"),
+            "zh-CN",
+        )
+        self.assertIsNone(
+            auto_trans.infer_target_language_from_filename("translations/messages.ts")
+        )
+
+    def test_resolve_languages_prefers_explicit_values(self):
+        """
+        Test that user-provided languages override metadata and filenames.
+        """
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix="_de.ts") as temp_file:
+            temp_file.write('<TS language="fr_FR" sourcelanguage="en_US"></TS>')
+            temp_file.flush()
+
+            languages = auto_trans.resolve_languages(temp_file.name, "es", "it")
+
+        self.assertEqual(languages, ("es", "it"))
+
+    def test_resolve_languages_uses_ts_metadata(self):
+        """
+        Test source and target inference from Qt TS root attributes.
+        """
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix=".ts") as temp_file:
+            temp_file.write('<TS language="zh_CN" sourcelanguage="en_US"></TS>')
+            temp_file.flush()
+
+            languages = auto_trans.resolve_languages(temp_file.name)
+
+        self.assertEqual(languages, ("en", "zh-CN"))
+
+    def test_resolve_languages_uses_filename_and_auto_source(self):
+        """
+        Test filename target inference and backend source detection fallback.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ts_path = Path(temp_dir) / "application_de.ts"
+            ts_path.write_text('<TS version="2.1"></TS>', encoding="utf-8")
+
+            languages = auto_trans.resolve_languages(ts_path)
+
+        self.assertEqual(languages, ("auto", "de"))
+
+    def test_resolve_languages_requires_inferable_target(self):
+        """
+        Test that an ambiguous file requests an explicit target instead of guessing.
+        """
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix=".ts") as temp_file:
+            temp_file.write('<TS version="2.1"></TS>')
+            temp_file.flush()
+
+            with self.assertRaisesRegex(ValueError, "Unable to infer the target language"):
+                auto_trans.resolve_languages(temp_file.name)
 
     @patch("auto_trans.translate_string", return_value='Er sagte "Hallo"')
     def test_transform_ts_file_preserves_untouched_source_entities(self, mock_translate_string):
@@ -634,18 +709,44 @@ class CliTests(unittest.TestCase):
             [call(get_startup_banner()), call(auto_trans.get_help_text())]
         )
 
-    @patch("sys.argv", ["auto_trans.py", "only-path"])
+    @patch("auto_trans.time.time", side_effect=[10.0, 12.5])
+    @patch(
+        "auto_trans.transform_ts_file",
+        return_value={
+            "messages_scanned": 0,
+            "unfinished_before": 0,
+            "translated_count": 0,
+            "numerus_translated_count": 0,
+            "skipped_count": 0,
+            "average_translation_seconds": 0.0,
+        },
+    )
+    @patch("auto_trans.resolve_languages", return_value=("auto", "de"))
+    @patch("sys.argv", ["auto_trans.py", "translations/app_de.ts"])
     @patch("builtins.print")
-    def test_main_prints_help_for_incomplete_arguments(self, mock_print):
+    def test_main_infers_languages_for_path_only(
+        self,
+        mock_print,
+        mock_resolve_languages,
+        mock_transform_ts_file,
+        _mock_time,
+    ):
         """
-        Test that too few positional arguments print the short help message.
+        Test that path-only invocation resolves languages before translating.
         """
         auto_trans.main()
 
-        self.assertEqual(
-            mock_print.call_args_list,
-            [call(get_startup_banner()), call(auto_trans.get_help_text())],
+        mock_resolve_languages.assert_called_once_with(
+            "translations/app_de.ts",
+            None,
+            None,
         )
+        mock_transform_ts_file.assert_called_once_with(
+            "translations/app_de.ts",
+            "auto",
+            "de",
+        )
+        self.assertEqual(mock_print.call_args_list[0], call(get_startup_banner()))
 
     @patch("auto_trans.time.time", side_effect=[10.0, 12.5])
     @patch(
@@ -659,11 +760,13 @@ class CliTests(unittest.TestCase):
             "average_translation_seconds": 0.456,
         },
     )
+    @patch("auto_trans.resolve_languages", return_value=("en", "de"))
     @patch("sys.argv", ["auto_trans.py", "testing/helloworld.ts", "en", "de"])
     @patch("builtins.print")
     def test_main_runs_translation_and_prints_duration(
         self,
         mock_print,
+        mock_resolve_languages,
         mock_transform_ts_file,
         _mock_time,
     ):
@@ -672,6 +775,11 @@ class CliTests(unittest.TestCase):
         """
         auto_trans.main()
 
+        mock_resolve_languages.assert_called_once_with(
+            "testing/helloworld.ts",
+            "en",
+            "de",
+        )
         mock_transform_ts_file.assert_called_once_with("testing/helloworld.ts", "en", "de")
         self.assertEqual(
             mock_print.call_args_list,
