@@ -121,6 +121,41 @@ class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public
 
         self.assertEqual(mock_translate_text.call_count, len(auto_trans.TRANSLATION_BACKENDS))
 
+    def test_auto_source_skips_backend_without_detection(self):
+        """
+        Test that auto detection never reaches a backend that guesses Chinese.
+        """
+        mock_translate_text = MagicMock(side_effect=RuntimeError("offline"))
+
+        with self.assertRaisesRegex(
+            auto_trans.TranslationBackendError,
+            "myMemory: source-language auto detection is unsupported",
+        ):
+            auto_trans.translate_with_configured_backends(
+                SimpleNamespace(translate_text=mock_translate_text),
+                "Hello world",
+                "auto",
+                "de",
+            )
+
+        self.assertEqual(
+            [call.kwargs["translator"] for call in mock_translate_text.call_args_list],
+            ["google", "bing"],
+        )
+
+    def test_format_translation_backends_reflects_auto_detection_support(self):
+        """
+        Test that the run summary reports only backends eligible for the source mode.
+        """
+        self.assertEqual(
+            auto_trans.format_translation_backends("auto"),
+            "google -> bing",
+        )
+        self.assertEqual(
+            auto_trans.format_translation_backends("en"),
+            "google -> bing -> myMemory",
+        )
+
     def test_format_duration_seconds_truncates_to_one_decimal(self):
         """
         Test that duration formatting cuts extra precision instead of rounding.
@@ -763,6 +798,7 @@ class CliTests(unittest.TestCase):
             "de",
         )
         self.assertEqual(mock_print.call_args_list[0], call(get_startup_banner()))
+        self.assertIn("Backend: google -> bing\n", mock_print.call_args_list[1].args[0])
 
     @patch("auto_trans.time.time", side_effect=[10.0, 12.5])
     @patch(
