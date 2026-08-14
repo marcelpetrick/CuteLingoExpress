@@ -34,7 +34,7 @@ python -m pip install .
 ```
 
 ## Invocation
-CuteLingoExpress accepts the path to the `.ts` file and, optionally, the source and target language codes. Explicit language arguments take precedence. When omitted, it reads `sourcelanguage` and `language` from the Qt TS root element, then tries a target-language suffix such as `_de.ts` or `_zh_CN.ts`. If no source language is declared, Google and Bing detect it automatically. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. Translation requests with an explicit source use the full `google -> bing -> myMemory` fallback chain; automatically detected sources use `google -> bing`. Every backend has a per-request timeout.
+CuteLingoExpress accepts the path to the `.ts` file and, optionally, the source and target language codes. Explicit language arguments take precedence. When omitted, it reads `sourcelanguage` and `language` from the Qt TS root element, then tries filename suffixes such as `_en_de.ts` for a source-target pair or `_de.ts` and `_zh_CN.ts` for a target. If no source language is declared, Google and Bing detect it automatically. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. Translation requests with an explicit or inferred source use the full `google -> bing -> myMemory` fallback chain; automatically detected sources use `google -> bing`. Every backend has a per-request timeout.
 
 After setup or a successful local pipeline run, use the installed command from `.venv`:
 ```shell
@@ -98,7 +98,7 @@ Python           : PASS Python 3.14.6
 Dependencies     : PASS Editable install with dev dependencies completed
 Version          : PASS cutelingoexpress --version completed
 Pylint           : PASS 10.00/10 (100%)
-Tests+Coverage   : PASS Ran 41 tests in 0.025s; TOTAL             185      0     48      0  100.00%
+Tests+Coverage   : PASS Ran 43 tests in 0.024s; TOTAL             194      0     50      0  100.00%
 Clean Build      : PASS Stale package artifacts removed
 Package Build    : PASS Successfully built cutelingoexpress-0.2.15.tar.gz and cutelingoexpress-0.2.15-py3-none-any.whl
 Wheel            : PASS cutelingoexpress-0.2.15-py3-none-any.whl
@@ -134,7 +134,7 @@ python test_auto_trans.py                                                       
 .translateString[bing]: 0.0s : Hello world -> 你好世界 (en -> cn)
 ......
 ----------------------------------------------------------------------
-Ran 41 tests in 0.025s
+Ran 43 tests in 0.024s
 
 OK
 ```
@@ -147,10 +147,10 @@ OK
 python -m coverage report -m
 Name            Stmts   Miss Branch BrPart    Cover   Missing
 -------------------------------------------------------------
-auto_trans.py     180      0     48      0  100.00%
+auto_trans.py     189      0     50      0  100.00%
 version.py          5      0      0      0  100.00%
 -------------------------------------------------------------
-TOTAL             185      0     48      0  100.00%
+TOTAL             194      0     50      0  100.00%
 ```
 
 ### Linting
