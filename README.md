@@ -30,10 +30,11 @@ python -m pip install .
 ```
 
 ## Invocation
-CuteLingoExpress is invoked by providing the path to the `.ts` file that needs translation and the ISO 639-1 language codes for the source and target languages. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. Translation requests use a fallback chain of `google -> bing -> myMemory` with a per-backend timeout.
+CuteLingoExpress accepts the path to the `.ts` file and, optionally, the source and target language codes. Explicit language arguments take precedence. When omitted, it reads `sourcelanguage` and `language` from the Qt TS root element, then tries a target-language suffix such as `_de.ts` or `_zh_CN.ts`. If no source language is declared, the translation backend detects it automatically. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. Translation requests use a fallback chain of `google -> bing -> myMemory` with a per-backend timeout.
 
 After setup or a successful local pipeline run, use the installed command from `.venv`:
 ```shell
+.venv/bin/cutelingoexpress testing/keepassxc_de.ts
 .venv/bin/cutelingoexpress testing/numerus.ts de cn
 .venv/bin/cutelingoexpress testing/helloworld.ts en cn
 .venv/bin/cutelingoexpress --version
