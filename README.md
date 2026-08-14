@@ -48,7 +48,7 @@ Running the source file directly still works when you are in the repository:
 Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
 ```shell
 $ .venv/bin/cutelingoexpress testing/helloworld.ts en cn
-CuteLingoExpress 0.2.13
+CuteLingoExpress 0.2.15
 Using Germany server backend.
 translateString[google]: 0.5s : Hello world! -> 你好世界！ (en -> cn)
 translateString[google]: 1.0s : My first dish. -> 我的第一道菜。 (en -> cn)
@@ -59,7 +59,7 @@ Overall runtime: 3.1s
 
 ## Versioning
 CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).  
-Current version is v0.2.13 (see Git tag).
+Current application version is v0.2.15. The release workflow creates the matching Git tag.
 
 The version is actively used across the lifecycle:
 * The single source of truth is [`version.py`](version.py).
@@ -90,16 +90,16 @@ The final section of a successful pipeline run should look like this:
 ```text
 ========== Local Pipeline Summary ==========
 Virtualenv       : PASS .venv is available
-Python           : PASS Python 3.14.5
+Python           : PASS Python 3.14.6
 Dependencies     : PASS Editable install with dev dependencies completed
 Version          : PASS cutelingoexpress --version completed
 Pylint           : PASS 10.00/10 (100%)
-Tests+Coverage   : PASS Ran 32 tests in 0.038s; TOTAL             151      0     36      0  100.00%
+Tests+Coverage   : PASS Ran 39 tests in 0.026s; TOTAL             178      0     44      0  100.00%
 Clean Build      : PASS Stale package artifacts removed
-Package Build    : PASS Successfully built cutelingoexpress-0.2.14.tar.gz and cutelingoexpress-0.2.14-py3-none-any.whl
-Wheel            : PASS cutelingoexpress-0.2.14-py3-none-any.whl
+Package Build    : PASS Successfully built cutelingoexpress-0.2.15.tar.gz and cutelingoexpress-0.2.15-py3-none-any.whl
+Wheel            : PASS cutelingoexpress-0.2.15-py3-none-any.whl
 Wheel Install    : PASS Built wheel installed into .venv
-Import Check     : PASS 0.2.14
+Import Check     : PASS 0.2.15
 ============================================
 ```
 
@@ -130,7 +130,7 @@ python test_auto_trans.py                                                       
 .translateString[bing]: 0.0s : Hello world -> 你好世界 (en -> cn)
 ......
 ----------------------------------------------------------------------
-Ran 32 tests in 0.035s
+Ran 39 tests in 0.026s
 
 OK
 ```
@@ -143,14 +143,14 @@ OK
 python -m coverage report -m
 Name            Stmts   Miss Branch BrPart    Cover   Missing
 -------------------------------------------------------------
-auto_trans.py     146      0     36      0  100.00%
+auto_trans.py     173      0     44      0  100.00%
 version.py          5      0      0      0  100.00%
 -------------------------------------------------------------
-TOTAL             151      0     36      0  100.00%
+TOTAL             178      0     44      0  100.00%
 ```
 
 ### Linting
-* `pylint` gives it a rating of 10.00/10 with release v0.2.13.
+* `pylint` gives it a rating of 10.00/10 for v0.2.15.
 * Run `python -m pylint auto_trans.py test_auto_trans.py version.py` to lint the Python modules.
 ```sh
 python -m pylint auto_trans.py test_auto_trans.py version.py                                                               ✔  CuteLingoExpress  
