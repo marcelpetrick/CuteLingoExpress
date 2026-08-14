@@ -709,6 +709,22 @@ class CliTests(unittest.TestCase):
             [call(get_startup_banner()), call(auto_trans.get_help_text())]
         )
 
+    @patch(
+        "sys.argv",
+        ["auto_trans.py", "translations/app_de.ts", "en", "de", "unexpected"],
+    )
+    @patch("builtins.print")
+    def test_main_prints_help_for_excess_arguments(self, mock_print):
+        """
+        Test that excess positional arguments are rejected with usage details.
+        """
+        auto_trans.main()
+
+        self.assertEqual(
+            mock_print.call_args_list,
+            [call(get_startup_banner()), call(auto_trans.get_help_text())],
+        )
+
     @patch("auto_trans.time.time", side_effect=[10.0, 12.5])
     @patch(
         "auto_trans.transform_ts_file",
