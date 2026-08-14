@@ -1,4 +1,8 @@
 # CuteLingoExpress
+
+[![Local Pipeline](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/local-pipeline.yml/badge.svg?branch=master)](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/local-pipeline.yml)
+[![Manual Release](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/release.yml/badge.svg)](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/release.yml)
+
 CuteLingoExpress is a tool for translating Qt `.ts` files during internationalization work. It automates the translation process by letting you specify the source and target language and quickly preview how translated layouts will look. This is useful for checking whether an app's interface works well in another language before involving native speakers for final review.
 
 **Author: Marcel Petrick <mail@marcelpetrick.it>**
