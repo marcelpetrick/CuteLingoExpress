@@ -75,7 +75,7 @@ Only YAML values are translated. Mapping keys, nesting, comments, scalar quote a
 Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
 ```shell
 $ .venv/bin/cutelingoexpress testing/helloworld.ts en cn
-CuteLingoExpress 0.3.0
+CuteLingoExpress 0.3.1
 Using Germany server backend.
 translateString[google]: 0.5s : Hello world! -> 你好世界！ (en -> cn)
 translateString[google]: 1.0s : My first dish. -> 我的第一道菜。 (en -> cn)
@@ -86,7 +86,7 @@ Overall runtime: 3.1s
 
 ## Versioning
 CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).  
-Current application version is v0.3.0. The release workflow creates the matching Git tag.
+Current application version is v0.3.1. The release workflow creates the matching Git tag.
 
 The version is actively used across the lifecycle:
 * The single source of truth is [`version.py`](version.py).
@@ -123,10 +123,10 @@ Version          : PASS cutelingoexpress --version completed
 Pylint           : PASS 10.00/10 (100%)
 Tests+Coverage   : PASS Ran 58 tests in 0.083s; TOTAL             274      0     84      0  100.00%
 Clean Build      : PASS Stale package artifacts removed
-Package Build    : PASS Successfully built cutelingoexpress-0.3.0.tar.gz and cutelingoexpress-0.3.0-py3-none-any.whl
-Wheel            : PASS cutelingoexpress-0.3.0-py3-none-any.whl
+Package Build    : PASS Successfully built cutelingoexpress-0.3.1.tar.gz and cutelingoexpress-0.3.1-py3-none-any.whl
+Wheel            : PASS cutelingoexpress-0.3.1-py3-none-any.whl
 Wheel Install    : PASS Built wheel installed into .venv
-Import Check     : PASS 0.3.0
+Import Check     : PASS 0.3.1
 ============================================
 ```
 
@@ -180,7 +180,7 @@ TOTAL                  274      0     84      0  100.00%
 ```
 
 ### Linting
-* `pylint` gives it a rating of 10.00/10 for v0.3.0.
+* `pylint` gives it a rating of 10.00/10 for v0.3.1.
 * Run `python -m pylint auto_trans.py auto_trans_yaml.py test_auto_trans.py test_auto_trans_yaml.py version.py` to lint the Python modules.
 ```sh
 python -m pylint auto_trans.py auto_trans_yaml.py test_auto_trans.py test_auto_trans_yaml.py version.py
