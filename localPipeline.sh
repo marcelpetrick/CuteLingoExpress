@@ -197,7 +197,7 @@ run_pylint() {
     local log_path="${PIPELINE_LOG_DIR}/pylint.log"
 
     if run_with_log "${log_path}" "${PYTHON}" -m pylint \
-        auto_trans.py auto_trans_yaml.py test_auto_trans.py test_auto_trans_yaml.py test_regressions.py version.py; then
+        auto_trans.py auto_trans_yaml.py test_auto_trans.py test_auto_trans_yaml.py test_regressions.py ts_xml.py version.py; then
         PYLINT_DETAILS="$(extract_pylint_details "${log_path}")"
         return 0
     fi

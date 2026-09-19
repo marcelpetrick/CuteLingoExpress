@@ -105,3 +105,33 @@ class PipelineImportTests(unittest.TestCase):
                     capture_output=True, text=True, check=False,
                 )
                 self.assertNotEqual(result.returncode, 0)
+
+
+class XmlPositionTests(unittest.TestCase):
+    """Formatting and commented examples must not change XML element identity."""
+
+    def test_compact_xml_and_comments_update_only_real_translation(self):
+        """Exercise both inline elements and misleading elements inside comments."""
+        samples = [
+            '<TS language="de"><message><source>Hello</source>'
+            '<translation type="unfinished"/></message></TS>',
+            '<TS language="de"><!-- <message><source>fake</source></message> -->'
+            '<message>\n<source>Hello</source>\n<!-- old example:\n'
+            '<translation type="unfinished">old</translation>\n-->\n'
+            '<translation type="unfinished"/>\n</message></TS>',
+            '<TS language="de"><message id="a>b">\n'
+            '<source><![CDATA[Hello <message>]]></source>\n'
+            '<translation type="unfinished"/>\n</message></TS>',
+        ]
+        for content in samples:
+            with self.subTest(content=content), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'app_de.ts'
+                path.write_text(content, encoding='utf-8')
+                with patch('auto_trans.translate_string', return_value='Grüße') as translator:
+                    auto_trans.transform_ts_file(path, 'en', 'de')
+                result = path.read_text(encoding='utf-8')
+                self.assertIn('<translation>Grüße</translation>', result)
+                self.assertEqual(translator.call_count, 1)
+                if 'old example' in content:
+                    self.assertIn('<translation type="unfinished">old</translation>', result)
+                    self.assertIn('<!-- <message><source>fake</source></message> -->', result)

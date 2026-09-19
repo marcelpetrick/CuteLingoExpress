@@ -27,14 +27,14 @@ dev = [
 cutelingoexpress = "auto_trans:main"
 
 [tool.setuptools]
-py-modules = ["auto_trans", "auto_trans_yaml", "version"]
+py-modules = ["auto_trans", "auto_trans_yaml", "ts_xml", "version"]
 
 [tool.setuptools.dynamic]
 version = {attr = "version.VERSION"}
 
 [tool.coverage.run]
 branch = true
-source = ["auto_trans", "auto_trans_yaml", "version"]
+source = ["auto_trans", "auto_trans_yaml", "ts_xml", "version"]
 
 [tool.coverage.report]
 show_missing = true

@@ -17,6 +17,7 @@ from tempfile import NamedTemporaryFile
 from xml.sax.saxutils import escape
 
 from version import VERSION, get_startup_banner
+from ts_xml import PositionedXml
 
 
 __version__ = VERSION
@@ -25,15 +26,6 @@ TRANSLATION_BACKENDS = ("google", "bing", "myMemory")
 AUTO_DETECTION_BACKENDS = frozenset(("google", "bing"))
 TRANSLATION_TIMEOUT_SECONDS = 20.0
 
-MESSAGE_PATTERN = re.compile(r'(<message\b[^>]*>.*?</message>)', re.DOTALL)
-SOURCE_PATTERN = re.compile(r'<source>(.*?)</source>', re.DOTALL)
-TRANSLATION_PATTERN = re.compile(
-    (
-        r'(?P<indent>^[ \t]*)<translation\b(?P<attrs>[^>]*?)'
-        r'(?P<self_closing>\s*/>|>(?P<inner>.*?)</translation>)'
-    ),
-    re.DOTALL | re.MULTILINE,
-)
 NUMERUS_FORM_PATTERN = re.compile(
     r'(<numerusform\b[^>]*>)(.*?)(</numerusform>)',
     re.DOTALL,
@@ -87,15 +79,19 @@ def replace_translation_in_message(message_block, translated_text, numerus):
     Replace the unfinished translation inside a single message block while
     leaving all unrelated XML untouched.
     """
-    source_match = SOURCE_PATTERN.search(message_block)
-    translation_match = TRANSLATION_PATTERN.search(message_block)
-    if source_match is None or translation_match is None:
+    document = PositionedXml(message_block)
+    source_span = document.root.find('source')
+    translation_span = document.root.find('translation')
+    if source_span is None or translation_span is None:
         raise ValueError("Unable to locate source or translation block in TS message.")
 
-    source_raw = source_match.group(1)
-    translation_indent = translation_match.group('indent')
-    updated_attributes = remove_unfinished_type(translation_match.group('attrs'))
-    inner_content = translation_match.group('inner') or ""
+    source_raw = document.text(source_span.open_end, source_span.close_start)
+    prefix = document.text(0, translation_span.start).rsplit('\n', maxsplit=1)[-1]
+    translation_indent = prefix if not prefix.strip() else ''
+    opening_tag = document.text(translation_span.start, translation_span.open_end)
+    attributes = opening_tag[len('<translation'):].removesuffix('>').removesuffix('/')
+    updated_attributes = remove_unfinished_type(attributes)
+    inner_content = document.text(translation_span.open_end, translation_span.close_start)
 
     escaped_translation = escape_ts_text(
         translated_text,
@@ -117,9 +113,9 @@ def replace_translation_in_message(message_block, translated_text, numerus):
         )
 
     return (
-        message_block[:translation_match.start()]
-        + replacement
-        + message_block[translation_match.end():]
+        document.text(0, translation_span.start)
+        + replacement[len(translation_indent):]
+        + document.text(translation_span.end, len(document.data))
     )
 
 
@@ -161,21 +157,22 @@ def replace_numerus_translation(
     )
 
 
-def update_ts_content(original_content, translated_messages):
+def update_ts_content(original_content, translated_messages, document=None):
     """
     Apply translation updates to the original TS file content without
     reserializing untouched XML.
     """
     updated_parts = []
     last_index = 0
-    message_matches = list(MESSAGE_PATTERN.finditer(original_content))
+    document = document or PositionedXml(original_content)
+    message_matches = list(document.iter('message'))
 
     if len(message_matches) != len(translated_messages):
         raise ValueError("TS message count changed while processing the file.")
 
     for message_match, message_update in zip(message_matches, translated_messages):
-        updated_parts.append(original_content[last_index:message_match.start()])
-        message_block = message_match.group(1)
+        updated_parts.append(document.text(last_index, message_match.start))
+        message_block = document.text(message_match.start, message_match.end)
 
         if message_update is None:
             updated_parts.append(message_block)
@@ -188,9 +185,9 @@ def update_ts_content(original_content, translated_messages):
                 )
             )
 
-        last_index = message_match.end()
+        last_index = message_match.end
 
-    updated_parts.append(original_content[last_index:])
+    updated_parts.append(document.text(last_index, len(document.data)))
     updated_content = ''.join(updated_parts)
     return updated_content if updated_content.endswith('\n') else f"{updated_content}\n"
 
@@ -479,8 +476,8 @@ def transform_ts_file(ts_file_path, _language, target_language):
     with open(ts_file_path, 'r', encoding='utf-8') as file:
         original_content = file.read()
 
-    tree = xml.etree.ElementTree.parse(ts_file_path)
-    root = tree.getroot()
+    document = PositionedXml(original_content)
+    root = document.root.element
     validate_catalog_target(root, target_language)
     translated_messages = []
     summary = {
@@ -502,7 +499,7 @@ def transform_ts_file(ts_file_path, _language, target_language):
         if was_numerus:
             summary['numerus_translated_count'] += 1
 
-    updated_content = update_ts_content(original_content, translated_messages)
+    updated_content = update_ts_content(original_content, translated_messages, document)
     write_ts_content(ts_file_path, updated_content)
 
     print("TS file transformed successfully.")
