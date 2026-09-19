@@ -1,12 +1,14 @@
 """Regression tests for issues found in the repository review."""
 
 import tempfile
+import io
 import subprocess
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 import auto_trans
+import auto_trans_yaml
 
 
 TS_SAMPLE = '''<TS language="de_DE"><context><name>Example</name>
@@ -238,3 +240,28 @@ class FilenameLanguageTests(unittest.TestCase):
             path = Path(directory) / 'qt_de.ts'
             path.write_text('<TS/>', encoding='utf-8')
             self.assertEqual(auto_trans.resolve_languages(path), ('auto', 'de'))
+
+
+class YamlMergeTests(unittest.TestCase):
+    """Translations preserve inherited YAML values as actual merge relationships."""
+
+    def test_merged_values_do_not_become_explicit_overrides(self):
+        """Round-trip and edit defaults to check inheritance, not just equal values."""
+        parser = auto_trans_yaml.create_yaml_parser()
+        data = parser.load('defaults: &defaults\n  title: Hello\ncopy:\n  <<: *defaults\n')
+        auto_trans_yaml.translate_yaml_node(data, 'en', 'de', lambda text, *_: 'X:' + text)
+        output = io.StringIO()
+        parser.dump(data, output)
+        self.assertEqual(output.getvalue().count('title:'), 1)
+        reloaded = parser.load(output.getvalue().replace('X:Hello', 'Changed default'))
+        self.assertEqual(reloaded['copy']['title'], 'Changed default')
+
+    def test_inline_merge_sources_are_translated(self):
+        """Merge mappings without a separate named entry must also be visited."""
+        parser = auto_trans_yaml.create_yaml_parser()
+        data = parser.load('copy:\n  <<: {title: Hello}\n  own: World\n')
+        auto_trans_yaml.translate_yaml_node(data, 'en', 'de', lambda text, *_: 'X:' + text)
+        output = io.StringIO()
+        parser.dump(data, output)
+        self.assertEqual(output.getvalue().count('title:'), 1)
+        self.assertEqual(parser.load(output.getvalue())['copy']['title'], 'X:Hello')

@@ -81,7 +81,12 @@ def translate_yaml_node(
 
     if isinstance(node, MutableMapping):
         translated_nodes[node_id] = node
-        for key, value in node.items():
+        for merged in getattr(node, 'merge', ()):
+            translate_yaml_node(
+                merged, source_language, target_language, translator, translated_nodes,
+            )
+        items = node.non_merged_items() if hasattr(node, 'non_merged_items') else node.items()
+        for key, value in items:
             node[key] = translate_yaml_node(
                 value,
                 source_language,
