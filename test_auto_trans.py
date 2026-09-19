@@ -299,8 +299,7 @@ class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public
             temp_file.write(content)
             temp_file.flush()
             auto_trans.transform_ts_file(temp_file.name, "en", "de")
-            temp_file.seek(0)
-            written_content = temp_file.read()
+            written_content = Path(temp_file.name).read_text(encoding='utf-8')
 
         mock_translate_string.assert_called_once_with("Don't expose this database", "en", "de")
         self.assertIn("<source>Don&apos;t expose this database</source>", written_content)
@@ -335,8 +334,7 @@ class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public
             temp_file.write(content)
             temp_file.flush()
             auto_trans.transform_ts_file(temp_file.name, "en", "de")
-            temp_file.seek(0)
-            written_content = temp_file.read()
+            written_content = Path(temp_file.name).read_text(encoding='utf-8')
 
         mock_translate_string.assert_called_once_with(
             '<html><span style=" font-weight:600;">Hi</span></html>',
@@ -556,8 +554,7 @@ class TransformTsFileTests(unittest.TestCase):
             temp_file.write(content)
             temp_file.flush()
             stats = auto_trans.transform_ts_file(temp_file.name, "en", "cn")
-            temp_file.seek(0)
-            written_content = temp_file.read()
+            written_content = Path(temp_file.name).read_text(encoding='utf-8')
 
         mock_translate_string.assert_called_once_with("Hello world", "en", "cn")
         self.assertIn("<translation>你好世界</translation>", written_content)
@@ -664,8 +661,7 @@ class TransformTsFileTests(unittest.TestCase):
             temp_file.write(content)
             temp_file.flush()
             stats = auto_trans.transform_ts_file(temp_file.name, "en", "de")
-            temp_file.seek(0)
-            written_content = temp_file.read()
+            written_content = Path(temp_file.name).read_text(encoding='utf-8')
 
         mock_translate_string.assert_called_once_with("%n file(s)", "en", "de")
         self.assertEqual(written_content.count("<numerusform>%n Datei(en)</numerusform>"), 2)
@@ -713,8 +709,7 @@ class TransformTsFileTests(unittest.TestCase):
             temp_file.flush()
             with patch("auto_trans.translate_string") as mock_translate_string:
                 stats = auto_trans.transform_ts_file(temp_file.name, "en", "de")
-            temp_file.seek(0)
-            written_content = temp_file.read()
+            written_content = Path(temp_file.name).read_text(encoding='utf-8')
 
         mock_translate_string.assert_not_called()
         self.assertIn("<translation>Hallo</translation>", written_content)

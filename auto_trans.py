@@ -9,8 +9,11 @@ import sys
 import importlib
 import re
 import time
+import os
+import stat
 import xml.etree.ElementTree
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from xml.sax.saxutils import escape
 
 from version import VERSION, get_startup_banner
@@ -424,6 +427,27 @@ def build_transform_summary(summary, translated_count):
     }
 
 
+def write_ts_content(ts_file_path, content):
+    """Replace a catalog atomically, preserving permissions and symlink targets."""
+    path = Path(ts_file_path).resolve()
+    mode = stat.S_IMODE(path.stat().st_mode)
+    temporary_path = None
+    try:
+        with NamedTemporaryFile(
+            'w', encoding='utf-8', newline='', dir=path.parent,
+            prefix=f'.{path.name}.', suffix='.tmp', delete=False,
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+            temporary_file.write(content)
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+        temporary_path.chmod(mode)
+        temporary_path.replace(path)
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
+
+
 def transform_ts_file(ts_file_path, _language, target_language):
     """
     Transform a `.ts` file by translating all unfinished messages.
@@ -463,8 +487,7 @@ def transform_ts_file(ts_file_path, _language, target_language):
             summary['numerus_translated_count'] += 1
 
     updated_content = update_ts_content(original_content, translated_messages)
-    with open(ts_file_path, 'w', encoding='utf-8') as file:
-        file.write(updated_content)
+    write_ts_content(ts_file_path, updated_content)
 
     print("TS file transformed successfully.")
     translated_count = sum(1 for item in translated_messages if item is not None)

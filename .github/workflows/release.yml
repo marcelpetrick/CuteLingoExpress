@@ -27,7 +27,7 @@ jobs:
       - name: Pylint
         run: >-
           python -m pylint auto_trans.py auto_trans_yaml.py test_auto_trans.py
-          test_auto_trans_yaml.py version.py
+          test_auto_trans_yaml.py test_regressions.py version.py
 
       - name: Tests with coverage
         run: |
