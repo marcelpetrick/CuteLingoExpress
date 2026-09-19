@@ -70,9 +70,14 @@ def remove_unfinished_type(attributes_text):
     Remove the ``type="unfinished"`` attribute while preserving any other
     translation attributes.
     """
-    updated_attributes = re.sub(r'\s+type="unfinished"', '', attributes_text)
-    updated_attributes = re.sub(r'\s+', ' ', updated_attributes).strip()
+    element = xml.etree.ElementTree.fromstring(f'<translation{attributes_text}/>')
+    attributes = re.compile(r"""\s+([\w:.-]+)\s*=\s*(?:"[^"]*"|'[^']*')""")
+    updated_attributes = attributes.sub(
+        lambda match: '' if match.group(1) == 'type' and element.get('type') == 'unfinished'
+        else match.group(0), attributes_text,
+    ).strip()
     return f' {updated_attributes}' if updated_attributes else ''
+
 
 
 def replace_translation_in_message(message_block, translated_text, numerus):

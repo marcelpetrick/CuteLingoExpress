@@ -206,3 +206,22 @@ class LengthVariantTests(unittest.TestCase):
                         auto_trans.transform_ts_file(path, 'en', 'de')
                     translator.assert_not_called()
                 self.assertEqual(path.read_text(encoding='utf-8'), content)
+
+
+class UnfinishedAttributeTests(unittest.TestCase):
+    """XML attribute syntax must not leave completed messages unfinished."""
+
+    def test_attribute_quotes_spacing_and_entities_are_supported(self):
+        """Only the type attribute is removed; other attribute values survive."""
+        for attributes in (" type='unfinished'", ' type = "unfinished"',
+                           " type='unf&#105;nished'", " type = 'unfinished' variants='no'"):
+            with self.subTest(attributes=attributes):
+                message = '<message><source>Hello</source>'
+                message += f'<translation{attributes}/></message>'
+                output = auto_trans.replace_translation_in_message(message, 'Hallo', False)
+                parsed = auto_trans.PositionedXml(output).root.find('translation').element
+                self.assertNotIn('type', parsed.attrib)
+                self.assertEqual(parsed.text, 'Hallo')
+        attributes = ' type="unfinished" custom=" text type=\'unfinished\'  here "'
+        self.assertEqual(auto_trans.remove_unfinished_type(attributes),
+                         ' custom=" text type=\'unfinished\'  here "')
