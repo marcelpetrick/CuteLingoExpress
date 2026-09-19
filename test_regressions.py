@@ -151,3 +151,36 @@ class PluralSlotTests(unittest.TestCase):
                 self.assertEqual(output.count('<numerusform>%n Dateien</numerusform>'),
                                  forms.count('<numerusform'))
                 self.assertNotIn('unfinished', output)
+
+
+class SourceContentTests(unittest.TestCase):
+    """Qt byte elements and source-less messages need schema-aware handling."""
+
+    def test_byte_values_and_tails_reach_translator_and_round_trip(self):
+        """Translate the complete logical string, including embedded controls."""
+        content = TS_SAMPLE.replace('Hello', 'First<byte value="x9"/>Last<byte value="1"/>!')
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'app_de.ts'
+            path.write_text(content, encoding='utf-8')
+            with patch(
+                'auto_trans.translate_string', side_effect=lambda text, *_: text
+            ) as translator:
+                auto_trans.transform_ts_file(path, 'en', 'de')
+            translator.assert_called_once_with('First\tLast\x01!', 'en', 'de')
+            self.assertIn('<byte value="x1"/>', path.read_text(encoding='utf-8'))
+            auto_trans.PositionedXml(path.read_text(encoding='utf-8'))
+
+    def test_missing_and_empty_sources_are_skipped(self):
+        """A source-less ID message must not abort other catalog processing."""
+        for source in ('', '<source/>', '<source> </source>'):
+            with self.subTest(source=source), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'app_de.ts'
+                content = TS_SAMPLE.replace('<source>Hello</source>', source)
+                path.write_text(content, encoding='utf-8')
+                with patch('auto_trans.translate_string') as translator:
+                    summary = auto_trans.transform_ts_file(path, 'en', 'de')
+                translator.assert_not_called()
+                self.assertEqual(summary['unfinished_before'], 1)
+                self.assertEqual(summary['skipped_count'], 1)
+                self.assertEqual(summary['translated_count'], 0)
+                self.assertEqual(path.read_text(encoding='utf-8'), content)

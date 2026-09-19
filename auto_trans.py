@@ -57,7 +57,12 @@ def escape_ts_text(text, preserve_double_quotes=False, preserve_single_quotes=Fa
         entity_map['"'] = '&quot;'
     if preserve_single_quotes:
         entity_map["'"] = '&apos;'
-    return escape(text, entity_map)
+    return ''.join(
+        f'<byte value="x{ord(character):x}"/>'
+        if ord(character) < 32 and character not in '\t\n\r'
+        else escape(character, entity_map)
+        for character in text
+    )
 
 
 def remove_unfinished_type(attributes_text):
@@ -383,6 +388,20 @@ def format_run_summary(summary):
     )
 
 
+def read_source_text(source):
+    """Decode Qt byte-type mixed content, including text after byte elements."""
+    if source is None:
+        return ''
+    parts = [source.text or '']
+    for child in source:
+        if child.tag != 'byte':
+            raise ValueError(f'Unsupported source element: {child.tag}')
+        value = child.attrib['value']
+        codepoint = int(value[1:], 16) if value.startswith('x') else int(value)
+        parts.extend((chr(codepoint), child.tail or ''))
+    return ''.join(parts)
+
+
 def process_message_translation(message, source_language, target_language):
     """
     Translate a single unfinished TS message and return summary data for it.
@@ -392,7 +411,9 @@ def process_message_translation(message, source_language, target_language):
     if translation is None or translation.attrib.get('type') != 'unfinished':
         return None, False, False, 0.0
 
-    source_text = message.find('source').text
+    source_text = read_source_text(message.find('source'))
+    if not source_text.strip():
+        return None, True, False, 0.0
     translation_start = time.time()
     translated_text = translate_string(source_text, source_language, target_language)
     elapsed_seconds = time.time() - translation_start
