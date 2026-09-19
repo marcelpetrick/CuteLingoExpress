@@ -131,6 +131,7 @@ Import Check     : PASS 0.3.2
 ```
 
 ## Handling errors
+* Unfinished messages with length variants are rejected before replacement; translate those messages manually. Messages with missing or blank sources are skipped and remain unfinished.
 * The tool uses unofficial web translation backends through `translators`, so backend availability can still change. If one backend fails, CuteLingoExpress automatically tries the next backend in the configured fallback chain.
 * Rate limits and regional backend availability can still affect long runs. If all configured backends fail, the command stops with the collected backend errors.
 * If `--lvgl-yaml` is requested without the optional parser, the command reports the exact `cutelingoexpress[yaml]` installation command. Normal Qt TS translation does not import or require the YAML parser.

@@ -86,6 +86,7 @@ def replace_translation_in_message(message_block, translated_text, numerus):
     if source_span is None or translation_span is None:
         raise ValueError("Unable to locate source or translation block in TS message.")
 
+    validate_translation_structure(translation_span.element)
     source_raw = document.text(source_span.open_end, source_span.close_start)
     prefix = document.text(0, translation_span.start).rsplit('\n', maxsplit=1)[-1]
     translation_indent = prefix if not prefix.strip() else ''
@@ -402,6 +403,13 @@ def read_source_text(source):
     return ''.join(parts)
 
 
+def validate_translation_structure(translation):
+    """Preserve unsupported length variants by refusing to replace their content."""
+    if any(element.tag == 'lengthvariant' or element.attrib.get('variants') == 'yes'
+           for element in translation.iter()):
+        raise ValueError('Length variants are not supported; translate this message manually.')
+
+
 def process_message_translation(message, source_language, target_language):
     """
     Translate a single unfinished TS message and return summary data for it.
@@ -411,6 +419,7 @@ def process_message_translation(message, source_language, target_language):
     if translation is None or translation.attrib.get('type') != 'unfinished':
         return None, False, False, 0.0
 
+    validate_translation_structure(translation)
     source_text = read_source_text(message.find('source'))
     if not source_text.strip():
         return None, True, False, 0.0

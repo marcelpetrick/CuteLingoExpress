@@ -184,3 +184,25 @@ class SourceContentTests(unittest.TestCase):
                 self.assertEqual(summary['skipped_count'], 1)
                 self.assertEqual(summary['translated_count'], 0)
                 self.assertEqual(path.read_text(encoding='utf-8'), content)
+
+
+class LengthVariantTests(unittest.TestCase):
+    """Unsupported length variants must be rejected without losing content."""
+
+    def test_length_variants_are_rejected_before_translation(self):
+        """Both singular and plural variants leave the source file untouched."""
+        for translation in (
+            '<translation type="unfinished" variants="yes">'
+            '<lengthvariant>Hello</lengthvariant><lengthvariant>Hi</lengthvariant></translation>',
+            '<translation type="unfinished"><numerusform variants="yes">'
+            '<lengthvariant>%n files</lengthvariant></numerusform></translation>',
+        ):
+            with self.subTest(translation=translation), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'app_de.ts'
+                content = TS_SAMPLE.replace('<translation type="unfinished"/>', translation)
+                path.write_text(content, encoding='utf-8')
+                with patch('auto_trans.translate_string', return_value='Hallo') as translator:
+                    with self.assertRaisesRegex(ValueError, 'Length variants'):
+                        auto_trans.transform_ts_file(path, 'en', 'de')
+                    translator.assert_not_called()
+                self.assertEqual(path.read_text(encoding='utf-8'), content)
