@@ -225,3 +225,16 @@ class UnfinishedAttributeTests(unittest.TestCase):
         attributes = ' type="unfinished" custom=" text type=\'unfinished\'  here "'
         self.assertEqual(auto_trans.remove_unfinished_type(attributes),
                          ' custom=" text type=\'unfinished\'  here "')
+
+
+class FilenameLanguageTests(unittest.TestCase):
+    """Project prefixes are not automatically source-language declarations."""
+
+    def test_unknown_prefix_falls_back_to_auto_source(self):
+        """A Qt-prefixed catalog uses its target suffix and automatic detection."""
+        self.assertEqual(auto_trans.infer_languages_from_filename('qt_de.ts'), (None, 'de'))
+        self.assertEqual(auto_trans.infer_languages_from_filename('app_en_de.ts'), ('en', 'de'))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'qt_de.ts'
+            path.write_text('<TS/>', encoding='utf-8')
+            self.assertEqual(auto_trans.resolve_languages(path), ('auto', 'de'))

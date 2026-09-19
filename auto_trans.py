@@ -32,6 +32,18 @@ FILENAME_LANGUAGE_PATTERN = re.compile(
 FILENAME_LANGUAGE_PAIR_PATTERN = re.compile(
     r"(?:^|[_.-])(?P<source>[a-z]{2})[_.-](?P<target>[a-z]{2,3})$"
 )
+# ISO 639-1 identifiers from pycountry’s ISO 639-3 database.
+SOURCE_LANGUAGE_CODES = frozenset((
+    "aa ab ae af ak am an ar as av ay az ba be bg bi bm bn bo br bs ca ce ch "
+    "co cr cs cu cv cy da de dv dz ee el en eo es et eu fa ff fi fj fo fr fy "
+    "ga gd gl gn gu gv ha he hi ho hr ht hu hy hz ia id ie ig ii ik io is it "
+    "iu ja jv ka kg ki kj kk kl km kn ko kr ks ku kv kw ky la lb lg li ln lo "
+    "lt lu lv mg mh mi mk ml mn mr ms mt my na nb nd ne ng nl nn no nr nv ny "
+    "oc oj om or os pa pi pl ps pt qu rm rn ro ru rw sa sc sd se sg sh si sk "
+    "sl sm sn so sq sr ss st su sv sw ta te tg th ti tk tl tn to tr ts tt tw "
+    "ty ug uk ur uz ve vi vo wa wo xh yi yo za zh zu "
+).split())
+
 TRANSLATOR_LOCALE_OVERRIDES = {
     "fa_AF": "fa-AF",
     "fr_CA": "fr-CA",
@@ -243,7 +255,7 @@ def infer_languages_from_filename(ts_file_path):
     """
     filename_stem = Path(ts_file_path).stem
     pair_match = FILENAME_LANGUAGE_PAIR_PATTERN.search(filename_stem)
-    if pair_match is not None:
+    if pair_match is not None and pair_match.group('source') in SOURCE_LANGUAGE_CODES:
         source_language = normalize_qt_language(pair_match.group('source'))
         target_language = normalize_qt_language(pair_match.group('target'))
         return source_language, target_language
