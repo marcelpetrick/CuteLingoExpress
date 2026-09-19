@@ -1,6 +1,7 @@
 """Regression tests for issues found in the repository review."""
 
 import tempfile
+import subprocess
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -87,3 +88,20 @@ class CatalogLanguageTests(unittest.TestCase):
             with patch('auto_trans.translate_string', return_value='你好'):
                 auto_trans.transform_ts_file(path, 'en', 'cn')
             self.assertIn('你好', path.read_text(encoding='utf-8'))
+
+
+class PipelineImportTests(unittest.TestCase):
+    """Exercise the real shell import-check function and its exit status."""
+
+    def test_import_failures_fail_the_pipeline_stage(self):
+        """A failed Python process or missing success marker cannot pass."""
+        script = Path('localPipeline.sh').read_text(encoding='utf-8')
+        function = script[script.index('verify_package_import() {'):script.index('\nmain() {')]
+        for executable in ('/bin/false', '/bin/true'):
+            with self.subTest(executable=executable):
+                result = subprocess.run(
+                    ['bash', '-c', 'log() { :; }\nROOT_DIR="$PWD"\n'
+                     f'PYTHON={executable}\n' + function + '\nverify_package_import'],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)

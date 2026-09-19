@@ -262,10 +262,13 @@ verify_package_import() {
     log "Verifying installed package import and version."
     local import_output
 
-    import_output="$(
-        cd "${ROOT_DIR}/dist"
-        "${PYTHON}" -c "import version; print(f'Package import ok: {version.VERSION}')"
-    )"
+    if ! import_output="$(
+        cd "${ROOT_DIR}/dist" || exit 1
+        "${PYTHON}" -c "import auto_trans, auto_trans_yaml, version; print(f'Package import ok: {version.VERSION}')"
+    )"; then
+        return 1
+    fi
+    [[ "${import_output}" == "Package import ok: "?* ]] || return 1
     printf '%s\n' "${import_output}"
     IMPORT_DETAILS="${import_output#Package import ok: }"
 }
