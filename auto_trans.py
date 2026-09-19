@@ -211,7 +211,7 @@ def get_help_text() -> str:
         "\n"
         "Examples:\n"
         "  python auto_trans.py translations/app_de.ts\n"
-        "  python auto_trans.py testing/helloworld.ts en cn\n"
+        "  python auto_trans.py testing/helloworld.ts en de\n"
         "  python auto_trans.py --lvgl-yaml translations/osd_en.yaml en de\n"
         "  python auto_trans.py --help\n"
     )
@@ -448,6 +448,21 @@ def write_ts_content(ts_file_path, content):
             temporary_path.unlink()
 
 
+def validate_catalog_target(root, target_language):
+    """Reject targets that would mix languages in an existing TS catalog."""
+    declared = root.attrib.get('language')
+    if not declared:
+        return
+    aliases = {'cn': 'zh-CN', 'zh': 'zh-CN'}
+    catalog = normalize_qt_language(declared)
+    target = normalize_qt_language(target_language)
+    if aliases.get(catalog, catalog) != aliases.get(target, target):
+        raise ValueError(
+            f'Target language {target_language!r} conflicts with catalog language '
+            f'{declared!r}; use a catalog prepared for the requested target.'
+        )
+
+
 def transform_ts_file(ts_file_path, _language, target_language):
     """
     Transform a `.ts` file by translating all unfinished messages.
@@ -466,6 +481,7 @@ def transform_ts_file(ts_file_path, _language, target_language):
 
     tree = xml.etree.ElementTree.parse(ts_file_path)
     root = tree.getroot()
+    validate_catalog_target(root, target_language)
     translated_messages = []
     summary = {
         'messages_scanned': 0,
@@ -556,18 +572,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# Example output from a manual run:
-# python auto_trans.py testing/helloworld.ts en cn
-#
-# Using Germany server backend.
-# translateString[google]: 1.3s : Hello world! -> 你好世界！ (en -> cn)
-# translateString[google]: 1.9s : My first dish. -> 我的第一道菜。 (en -> cn)
-# translateString[google]: 2.1s : white bread with butter -> 白面包和黄油 (en -> cn)
-# TS file transformed successfully.
-# Overall runtime: 5.4s
-# (venv) [mpetrick@marcel-precision3551 AutoTrans]$
-
-# Manual test commands:
-# python auto_trans.py testing/numerus.ts de cn
-# python auto_trans.py testing/helloworld.ts en cn

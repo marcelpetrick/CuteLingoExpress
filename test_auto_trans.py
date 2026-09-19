@@ -175,7 +175,7 @@ class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public
             help_text,
         )
         self.assertIn("Languages are read from Qt TS metadata", help_text)
-        self.assertIn("python auto_trans.py testing/helloworld.ts en cn", help_text)
+        self.assertIn("python auto_trans.py testing/helloworld.ts en de", help_text)
         self.assertIn("--lvgl-yaml <yaml_file>", help_text)
 
     def test_normalize_qt_language_preserves_supported_locale_variants(self):
@@ -540,7 +540,7 @@ class TransformTsFileTests(unittest.TestCase):
         """
         content = """<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="de_DE">
+<TS version="2.1" language="zh_CN">
 <context>
     <name>QPushButton</name>
     <message>

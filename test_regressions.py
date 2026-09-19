@@ -63,3 +63,27 @@ class AtomicTsWriteTests(unittest.TestCase):
             self.assertTrue(link.is_symlink())
             self.assertEqual(path.stat().st_mode & 0o777, 0o640)
             self.assertIn('<translation>Hallo</translation>', path.read_text(encoding='utf-8'))
+
+
+class CatalogLanguageTests(unittest.TestCase):
+    """An explicit target cannot silently mix languages in an existing catalog."""
+
+    def test_mismatched_target_is_rejected_before_translation_or_write(self):
+        """Finished entries and root metadata remain consistent with new entries."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'app_de.ts'
+            path.write_text(TS_SAMPLE, encoding='utf-8')
+            with patch('auto_trans.translate_string', return_value='你好') as translator:
+                with self.assertRaisesRegex(ValueError, 'catalog language'):
+                    auto_trans.transform_ts_file(path, 'en', 'cn')
+                translator.assert_not_called()
+            self.assertEqual(path.read_text(encoding='utf-8'), TS_SAMPLE)
+
+    def test_matching_chinese_alias_is_accepted(self):
+        """The backend alias cn is equivalent to Qt's zh_CN locale."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'app_zh_CN.ts'
+            path.write_text(TS_SAMPLE.replace('de_DE', 'zh_CN'), encoding='utf-8')
+            with patch('auto_trans.translate_string', return_value='你好'):
+                auto_trans.transform_ts_file(path, 'en', 'cn')
+            self.assertIn('你好', path.read_text(encoding='utf-8'))

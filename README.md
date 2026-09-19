@@ -46,19 +46,19 @@ python -m pip install .
 ```
 
 ## Qt TS invocation
-CuteLingoExpress accepts the path to the `.ts` file and, optionally, the source and target language codes. Explicit language arguments take precedence. When omitted, it reads `sourcelanguage` and `language` from the Qt TS root element, then tries filename suffixes such as `_en_de.ts` for a source-target pair or `_de.ts` and `_zh_CN.ts` for a target. If no source language is declared, Google and Bing detect it automatically. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. Translation requests with an explicit or inferred source use the full `google -> bing -> myMemory` fallback chain; automatically detected sources use `google -> bing`. Every backend has a per-request timeout.
+CuteLingoExpress accepts the path to the `.ts` file and, optionally, the source and target language codes. Explicit language arguments take precedence, but a target that conflicts with the catalog’s `language` metadata is rejected to prevent mixed-language output. When omitted, it reads `sourcelanguage` and `language` from the Qt TS root element, then tries filename suffixes such as `_en_de.ts` for a source-target pair or `_de.ts` and `_zh_CN.ts` for a target. If no source language is declared, Google and Bing detect it automatically. For more information about supported language codes, refer to the `translators` documentation at https://pypi.org/project/translators/. Translation requests with an explicit or inferred source use the full `google -> bing -> myMemory` fallback chain; automatically detected sources use `google -> bing`. Every backend has a per-request timeout.
 
 After setup or a successful local pipeline run, use the installed command from `.venv`:
 ```shell
 .venv/bin/cutelingoexpress testing/keepassxc_de.ts
-.venv/bin/cutelingoexpress testing/numerus.ts de cn
-.venv/bin/cutelingoexpress testing/helloworld.ts en cn
+.venv/bin/cutelingoexpress testing/numerus.ts en de
+.venv/bin/cutelingoexpress testing/helloworld.ts en de
 .venv/bin/cutelingoexpress --version
 ```
 
 Running the source file directly still works when you are in the repository:
 ```shell
-.venv/bin/python auto_trans.py testing/helloworld.ts en cn
+.venv/bin/python auto_trans.py testing/helloworld.ts en de
 ```
 
 ## Optional LVGL YAML invocation
@@ -74,12 +74,12 @@ Only YAML values are translated. Mapping keys, nesting, comments, scalar quote a
 
 Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
 ```shell
-$ .venv/bin/cutelingoexpress testing/helloworld.ts en cn
+$ .venv/bin/cutelingoexpress testing/helloworld.ts en de
 CuteLingoExpress 0.3.2
 Using Germany server backend.
-translateString[google]: 0.5s : Hello world! -> 你好世界！ (en -> cn)
-translateString[google]: 1.0s : My first dish. -> 我的第一道菜。 (en -> cn)
-translateString[google]: 1.5s : white bread with butter -> 白面包和黄油 (en -> cn)
+translateString[google]: 0.5s : Hello world! -> Hallo Welt! (en -> de)
+translateString[google]: 1.0s : My first dish. -> Mein erstes Gericht. (en -> de)
+translateString[google]: 1.5s : white bread with butter -> Weißbrot mit Butter (en -> de)
 TS file transformed successfully.
 Overall runtime: 3.1s
 ```
