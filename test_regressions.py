@@ -135,3 +135,19 @@ class XmlPositionTests(unittest.TestCase):
                 if 'old example' in content:
                     self.assertIn('<translation type="unfinished">old</translation>', result)
                     self.assertIn('<!-- <message><source>fake</source></message> -->', result)
+
+
+class PluralSlotTests(unittest.TestCase):
+    """All existing plural slots survive regardless of empty-element spelling."""
+
+    def test_self_closing_and_mixed_plural_slots_are_filled(self):
+        """Check compact self-closing forms and a mixture of paired forms."""
+        for forms in ('<numerusform/><numerusform/>',
+                      '<numerusform/><numerusform></numerusform><numerusform />'):
+            with self.subTest(forms=forms):
+                message = '<message numerus="yes"><source>%n files</source>'
+                message += f'<translation type="unfinished">{forms}</translation></message>'
+                output = auto_trans.replace_translation_in_message(message, '%n Dateien', True)
+                self.assertEqual(output.count('<numerusform>%n Dateien</numerusform>'),
+                                 forms.count('<numerusform'))
+                self.assertNotIn('unfinished', output)

@@ -26,10 +26,6 @@ TRANSLATION_BACKENDS = ("google", "bing", "myMemory")
 AUTO_DETECTION_BACKENDS = frozenset(("google", "bing"))
 TRANSLATION_TIMEOUT_SECONDS = 20.0
 
-NUMERUS_FORM_PATTERN = re.compile(
-    r'(<numerusform\b[^>]*>)(.*?)(</numerusform>)',
-    re.DOTALL,
-)
 FILENAME_LANGUAGE_PATTERN = re.compile(
     r"(?:^|[_.-])(?P<language>[a-z]{2,3})(?:[_-](?P<territory>[A-Z]{2}))?$"
 )
@@ -132,7 +128,9 @@ def replace_numerus_translation(
     already carries the right number of ``numerusform`` elements, so keep that
     structure and place the translated text into each existing slot.
     """
-    numerus_matches = list(NUMERUS_FORM_PATTERN.finditer(inner_content))
+    document = PositionedXml(f'<translation>{inner_content}</translation>')
+    numerus_matches = [child for child in document.root.children
+                       if child.element.tag == 'numerusform']
     if not numerus_matches:
         numerusform_indent = f"{translation_indent}    "
         return (
@@ -142,14 +140,15 @@ def replace_numerus_translation(
         )
 
     updated_parts = []
-    last_index = 0
+    last_index = document.root.open_end
     for numerus_match in numerus_matches:
-        updated_parts.append(inner_content[last_index:numerus_match.start()])
-        updated_parts.append(
-            f"{numerus_match.group(1)}{escaped_translation}{numerus_match.group(3)}"
-        )
-        last_index = numerus_match.end()
-    updated_parts.append(inner_content[last_index:])
+        updated_parts.append(document.text(last_index, numerus_match.start))
+        opening = document.text(numerus_match.start, numerus_match.open_end)
+        if opening.endswith('/>'):
+            opening = opening[:-2].rstrip() + '>'
+        updated_parts.append(f'{opening}{escaped_translation}</numerusform>')
+        last_index = numerus_match.end
+    updated_parts.append(document.text(last_index, document.root.close_start))
 
     return (
         f"{translation_indent}<translation{updated_attributes}>"
