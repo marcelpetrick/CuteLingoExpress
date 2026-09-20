@@ -2,6 +2,13 @@
 
 [![Local Pipeline](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/local-pipeline.yml/badge.svg?branch=master)](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/local-pipeline.yml)
 [![Manual Release](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/release.yml/badge.svg)](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/release.yml)
+[![Latest Release](https://img.shields.io/github/v/release/marcelpetrick/CuteLingoExpress?sort=semver)](https://github.com/marcelpetrick/CuteLingoExpress/releases/latest)
+[![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776ab.svg)](https://www.python.org/)
+[![Qt TS](https://img.shields.io/badge/Qt-TS%20translation-41cd52.svg)](#qt-ts-invocation)
+[![LVGL YAML](https://img.shields.io/badge/LVGL-YAML%20translation-orange.svg)](#optional-lvgl-yaml-invocation)
+[![Coverage: 98.58%](https://img.shields.io/badge/coverage-98.58%25-brightgreen.svg)](#software-quality)
+[![Pylint: 10/10](https://img.shields.io/badge/Pylint-10%2F10-brightgreen.svg)](#software-quality)
 
 CuteLingoExpress is primarily a tool for translating Qt `.ts` files during internationalization work. It automates the translation process by letting you specify the source and target language and quickly preview how translated layouts will look. This is useful for checking whether an app's interface works well in another language before involving native speakers for final review.
 
@@ -9,7 +16,7 @@ As an optional side feature, the same application can translate string values in
 
 **Author: Marcel Petrick <mail@marcelpetrick.it>**
 
-**Note: projected is generated with AI.**
+**Note: project is generated with AI.**
 
 **License: GPL-3.0-only, as declared in the package metadata. See [`LICENSE`](LICENSE).**
 
@@ -17,7 +24,7 @@ As an optional side feature, the same application can translate string values in
 The logo consists of a cute (Qt..) snake (Python) circling a upper-case TS (symbolising the tanslation files).
 
 ## Motivation
-Internationalization plays a crucial role in developing successful applications, as not all customers are comfortable with English. Qt provides a comprehensive ecosystem for handling internationalization, including language support in C++/Qt and tools such as `lupdate`, `release` and `Linguist`. One thing that was missing was a quick way to automatically generate translations and review them in the context of an app's layouts. CuteLingoExpress fills that gap by automating the translation process and giving developers a convenient way to assess layout compatibility.
+Internationalization plays a crucial role in developing successful applications, as not all customers are comfortable with English. Qt provides a comprehensive ecosystem for handling internationalization, including language support in C++/Qt and tools such as `lupdate`, `lrelease` and `Linguist`. One thing that was missing was a quick way to automatically generate translations and review them in the context of an app's layouts. CuteLingoExpress fills that gap by automating the translation process and giving developers a convenient way to assess layout compatibility.
 
 # Usage
 
@@ -72,18 +79,6 @@ The source file is never modified. A sibling output is written with the target l
 
 Only YAML values are translated. Mapping keys, nesting, comments, scalar quote and block styles, anchors, lists, numbers, booleans, and null values are preserved through `ruamel.yaml` round-trip processing. Translation calls use the same timeout and backend fallback behavior as Qt TS translation. If an anchored string is shared by a key and values, the key keeps its original anchor and the translated values share a new, uniquely named anchor.
 
-Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
-```shell
-$ .venv/bin/cutelingoexpress testing/helloworld.ts en de
-CuteLingoExpress 0.4.0
-Using Germany server backend.
-translateString[google]: 0.5s : Hello world! -> Hallo Welt! (en -> de)
-translateString[google]: 1.0s : My first dish. -> Mein erstes Gericht. (en -> de)
-translateString[google]: 1.5s : white bread with butter -> Weißbrot mit Butter (en -> de)
-TS file transformed successfully.
-Overall runtime: 3.1s
-```
-
 ## Versioning
 CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).  
 Current application version is v0.4.0. The release workflow creates the matching Git tag.
@@ -113,22 +108,8 @@ After the pipeline succeeds, the built wheel is installed into `.venv`, so real 
 .venv/bin/cutelingoexpress path/to/file.ts source_lang target_lang
 ```
 
-The final section of a successful pipeline run should look like this:
-```text
-========== Local Pipeline Summary ==========
-Virtualenv       : PASS .venv is available
-Python           : PASS Python 3.14.6
-Dependencies     : PASS Editable install with dev dependencies completed
-Version          : PASS cutelingoexpress --version completed
-Pylint           : PASS 10.00/10 (100%)
-Tests+Coverage   : PASS Ran 58 tests in 0.083s; TOTAL             274      0     84      0  100.00%
-Clean Build      : PASS Stale package artifacts removed
-Package Build    : PASS Successfully built cutelingoexpress-0.4.0.tar.gz and cutelingoexpress-0.4.0-py3-none-any.whl
-Wheel            : PASS cutelingoexpress-0.4.0-py3-none-any.whl
-Wheel Install    : PASS Built wheel installed into .venv
-Import Check     : PASS 0.4.0
-============================================
-```
+The pipeline prints a PASS/FAIL summary for each mandatory stage. A failed stage
+returns a nonzero exit status and prevents later packaging stages from running.
 
 ## Handling errors
 * Unfinished messages with length variants are rejected before replacement; translate those messages manually. Messages with missing or blank sources are skipped and remain unfinished.
@@ -146,49 +127,36 @@ Import Check     : PASS 0.4.0
 * During development, a key goal was to preserve the original file structure to minimize the differences when comparing versions. This approach ensures that the changes made during translation are easily identifiable.
 
 ## Software quality
-### Unit testing
-* Please run the tests in `test_auto_trans.py` and `test_auto_trans_yaml.py` to check for regressions.
-```sh
-python -m unittest test_auto_trans.py test_auto_trans_yaml.py
-................TS file transformed successfully.
-.TS file transformed successfully.
-.TS file transformed successfully.
-.TS file transformed successfully.
-.TS file transformed successfully.
-.TS file transformed successfully.
-.translateString[google]: 0.0s : Hello world -> 你好世界 (en -> cn)
-.translateString[bing]: 0.0s : Hello world -> 你好世界 (en -> cn)
-......
-----------------------------------------------------------------------
-Ran 58 tests in 0.083s
 
-OK
+The 0.4.0 validation snapshot has 76 passing automated tests, 98.58% combined
+statement and branch coverage, and Pylint 10/10. The coverage and Pylint badges
+show that snapshot; workflow and release badges update from GitHub.
+
+Run the complete gate with `./localPipeline.sh`. To run individual checks:
+
+```sh
+.venv/bin/python -m unittest
+.venv/bin/python -m coverage run -m unittest
+.venv/bin/python -m coverage report -m
+.venv/bin/python -m coverage html
 ```
 
-* To generate coverage for every test, install the development and YAML dependencies with `python -m pip install -e ".[dev,yaml]"`.
-* Run `python -m coverage run -m unittest` to execute the full test suite with coverage collection.
-* Run `python -m coverage report -m` to print a line-by-line coverage summary in the terminal.
-* Run `python -m coverage html` to generate an HTML report in `htmlcov/index.html`.
+The default suite skips four opt-in tests that contact real translation services.
+After the pipeline installs the built wheel, run them with:
+
 ```sh
-python -m coverage report -m
-Name                 Stmts   Miss Branch BrPart    Cover   Missing
-------------------------------------------------------------------
-auto_trans.py          197      0     54      0  100.00%
-auto_trans_yaml.py      72      0     30      0  100.00%
-version.py               5      0      0      0  100.00%
-------------------------------------------------------------------
-TOTAL                  274      0     84      0  100.00%
+CUTELINGOEXPRESS_LIVE_TESTS=1 .venv/bin/python -m unittest -v test_live_translation
 ```
 
-### Linting
-* `pylint` gives it a rating of 10.00/10 for v0.4.0.
-* Run `python -m pylint auto_trans.py auto_trans_yaml.py test_auto_trans.py test_auto_trans_yaml.py version.py` to lint the Python modules.
-```sh
-python -m pylint auto_trans.py auto_trans_yaml.py test_auto_trans.py test_auto_trans_yaml.py version.py
-
---------------------------------------------------------------------
-Your code has been rated at 10.00/10 (previous run: 10.00/10, +0.00)
-```
+These tests invoke the installed command outside the source tree on temporary
+copies of all three TS fixtures and the full 154-string LVGL template. They check
+source preservation, finished translations, Qt placeholders and plural slots,
+YAML keys, value types, scalar styles, and comments. If Qt's `lrelease` is
+available, the translated TS files are also compiled to `.qm` files.
+CLI logs remain in `/tmp/cle-live-validation`; set
+`CUTELINGOEXPRESS_LIVE_OUTPUT` to use another directory. Backend availability and
+rate limits can affect these live checks, and translation wording still needs
+human review.
 
 # Naming?
 * The name "CuteLingoExpress" combines elements from different aspects of the tool to convey its purpose and characteristics. It blends "cute" from Qt, "lingo" representing the language translation aspect, and "express" to emphasize the tool's speed and efficiency in translating Qt content. This name reflects the tool's goal of delivering delightful and rapid translations while capturing the essence of the Qt framework.
