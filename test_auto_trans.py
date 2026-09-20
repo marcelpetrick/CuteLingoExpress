@@ -267,12 +267,12 @@ class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public
         """
         Test that an ambiguous file requests an explicit target instead of guessing.
         """
-        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", suffix=".ts") as temp_file:
-            temp_file.write('<TS version="2.1"></TS>')
-            temp_file.flush()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "translations.ts"
+            path.write_text('<TS version="2.1"></TS>', encoding="utf-8")
 
             with self.assertRaisesRegex(ValueError, "Unable to infer the target language"):
-                auto_trans.resolve_languages(temp_file.name)
+                auto_trans.resolve_languages(path)
 
     @patch("auto_trans.translate_string", return_value='Er sagte "Hallo"')
     def test_transform_ts_file_preserves_untouched_source_entities(self, mock_translate_string):
