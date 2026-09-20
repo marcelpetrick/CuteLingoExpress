@@ -211,7 +211,7 @@ def update_ts_content(original_content, translated_messages, document=None):
 
     updated_parts.append(document.text(last_index, len(document.data)))
     updated_content = ''.join(updated_parts)
-    return updated_content if updated_content.endswith('\n') else f"{updated_content}\n"
+    return updated_content
 
 
 def get_help_text() -> str:
@@ -519,7 +519,7 @@ def transform_ts_file(ts_file_path, _language, target_language):
     :param target_language: The ISO 639-1 code of the target language.
     :type target_language: str
     """
-    with open(ts_file_path, 'r', encoding='utf-8') as file:
+    with open(ts_file_path, 'r', encoding='utf-8', newline='') as file:
         original_content = file.read()
 
     document = PositionedXml(original_content)
@@ -546,7 +546,8 @@ def transform_ts_file(ts_file_path, _language, target_language):
             summary['numerus_translated_count'] += 1
 
     updated_content = update_ts_content(original_content, translated_messages, document)
-    write_ts_content(ts_file_path, updated_content)
+    if updated_content != original_content:
+        write_ts_content(ts_file_path, updated_content)
 
     print("TS file transformed successfully.")
     translated_count = sum(1 for item in translated_messages if item is not None)

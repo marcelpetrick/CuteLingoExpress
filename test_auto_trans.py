@@ -474,9 +474,9 @@ class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public
         ):
             auto_trans.update_ts_content(original_content, [])
 
-    def test_update_ts_content_adds_trailing_newline(self):
+    def test_update_ts_content_preserves_missing_trailing_newline(self):
         """
-        Test that updated TS content always ends with a trailing newline.
+        Test that rewriting preserves the absence of a trailing newline.
         """
         original_content = """<TS>
 <message>
@@ -489,7 +489,7 @@ class HelperFunctionTests(unittest.TestCase):  # pylint: disable=too-many-public
             [{"translated_text": "Hallo", "numerus": False}],
         )
 
-        self.assertTrue(updated_content.endswith("\n"))
+        self.assertFalse(updated_content.endswith("\n"))
 
     def test_format_run_summary_includes_requested_statistics(self):
         """

@@ -350,3 +350,26 @@ class ReleaseRetryTests(unittest.TestCase):
             self.assertEqual(self.run_step(repository, publish=True).returncode, 0)
             self.git(repository, 'commit', '--allow-empty', '-m', 'different commit')
             self.assertNotEqual(self.run_step(repository).returncode, 0)
+
+
+class NewlinePreservationTests(unittest.TestCase):
+    """Catalog edits preserve original newlines and avoid no-op replacements."""
+
+    def test_crlf_is_preserved_and_finished_files_are_not_written(self):
+        """Test both a translated Windows-format file and an unchanged catalog."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'app_de.ts'
+            content = TS_SAMPLE.replace('\n', '\r\n').encode('utf-8')
+            path.write_bytes(content)
+            with patch('auto_trans.translate_string', return_value='Hallo'):
+                auto_trans.transform_ts_file(path, 'en', 'de')
+            output = path.read_bytes()
+            self.assertEqual(output.count(b'\r\n'), content.count(b'\r\n'))
+            self.assertNotIn(b'\n', output.replace(b'\r\n', b''))
+            # No trailing newline is also meaningful source formatting.
+            path.write_bytes(output.rstrip(b'\r\n'))
+            before = path.read_bytes()
+            with patch('auto_trans.write_ts_content') as writer:
+                auto_trans.transform_ts_file(path, 'en', 'de')
+                writer.assert_not_called()
+            self.assertEqual(path.read_bytes(), before)
