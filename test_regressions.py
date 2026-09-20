@@ -3,6 +3,7 @@
 import tempfile
 import io
 import subprocess
+import sys
 import warnings
 import unittest
 from pathlib import Path
@@ -298,7 +299,7 @@ class CliExitStatusTests(unittest.TestCase):
                           ['missing.ts', 'en', 'de', 'extra']):
             with self.subTest(arguments=arguments):
                 result = subprocess.run(
-                    ['.venv/bin/python', 'auto_trans.py', *arguments],
+                    [sys.executable, 'auto_trans.py', *arguments],
                     capture_output=True, text=True, check=False,
                 )
                 self.assertEqual(result.returncode, 2)
