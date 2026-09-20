@@ -30,9 +30,9 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -e ".[dev]"
 ```
 
-To enable the optional LVGL YAML mode, install the `yaml` extra:
+To enable the optional LVGL YAML mode in the same environment, install the `yaml` extra:
 ```sh
-python -m pip install -e ".[yaml]"
+.venv/bin/python -m pip install -e ".[yaml]"
 ```
 
 Contributors running the complete test and quality pipeline should install both extras:
