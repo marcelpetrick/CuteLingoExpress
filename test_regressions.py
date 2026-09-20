@@ -303,3 +303,50 @@ class CliExitStatusTests(unittest.TestCase):
                 )
                 self.assertEqual(result.returncode, 2)
                 self.assertIn('Usage:', result.stdout)
+
+
+class ReleaseRetryTests(unittest.TestCase):
+    """Run release tag steps against isolated repositories and a local remote."""
+
+    @staticmethod
+    def git(repository, *arguments):
+        """Execute a checked Git command without touching the working repository."""
+        return subprocess.run(['git', '-C', str(repository), *arguments],
+                              capture_output=True, text=True, check=True)
+
+    @staticmethod
+    def run_step(repository, publish=False):
+        """Execute the workflow's actual shell step with test expression values."""
+        workflow = auto_trans_yaml.create_yaml_parser().load(
+            Path('.github/workflows/release.yml').read_text(encoding='utf-8')
+        )
+        names = (('Create and push tag',) if publish else
+                 ('Fail if tag already exists', 'Verify release tag'))
+        step = next(step for step in workflow['jobs']['release']['steps'] if step['name'] in names)
+        command = step['run'].replace('${{ steps.version.outputs.tag }}', 'v1.2.3')
+        command = command.replace('${{ github.actor }}', 'regression-test')
+        return subprocess.run(['bash', '-e', '-c', command], cwd=repository,
+                              capture_output=True, text=True, check=False)
+
+    def test_release_retry_accepts_same_commit_and_rejects_different_commit(self):
+        """An already-pushed tag is resumable only for its exact commit."""
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory) / 'work'
+            remote = Path(directory) / 'remote.git'
+            repository.mkdir()
+            remote.mkdir()
+            self.git(remote, 'init', '--bare')
+            self.git(repository, 'init')
+            self.git(repository, 'config', 'user.name', 'Regression Test')
+            self.git(repository, 'config', 'user.email', 'test@example.invalid')
+            self.git(repository, 'config', 'commit.gpgsign', 'false')
+            self.git(repository, 'config', 'tag.gpgsign', 'false')
+            self.git(repository, 'remote', 'add', 'origin', str(remote))
+            self.git(repository, 'commit', '--allow-empty', '-m', 'test fixture')
+            self.assertEqual(self.run_step(repository).returncode, 0)
+            self.assertEqual(self.run_step(repository, publish=True).returncode, 0)
+            retry = self.run_step(repository)
+            self.assertEqual(retry.returncode, 0, retry.stderr + retry.stdout)
+            self.assertEqual(self.run_step(repository, publish=True).returncode, 0)
+            self.git(repository, 'commit', '--allow-empty', '-m', 'different commit')
+            self.assertNotEqual(self.run_step(repository).returncode, 0)

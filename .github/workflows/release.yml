@@ -41,11 +41,14 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Fail if tag already exists
+      - name: Verify release tag
         run: |
-          if git rev-parse "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
-            echo "Tag ${{ steps.version.outputs.tag }} already exists — bump the version before releasing."
-            exit 1
+          tag="${{ steps.version.outputs.tag }}"
+          if git show-ref --verify --quiet "refs/tags/${tag}"; then
+            if [[ "$(git rev-parse "refs/tags/${tag}^{commit}")" != "$(git rev-parse HEAD)" ]]; then
+              echo "Tag ${tag} belongs to another commit; bump the version before releasing."
+              exit 1
+            fi
           fi
 
       - name: Build package
@@ -55,8 +58,11 @@ jobs:
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
-          git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
-          git push origin "${{ steps.version.outputs.tag }}"
+          tag="${{ steps.version.outputs.tag }}"
+          if ! git show-ref --verify --quiet "refs/tags/${tag}"; then
+            git tag -a "${tag}" -m "Release ${tag}"
+          fi
+          git push origin "refs/tags/${tag}"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v3.0.3
