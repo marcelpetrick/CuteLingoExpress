@@ -11,7 +11,7 @@ As an optional side feature, the same application can translate string values in
 
 **Note: projected is generated with AI.**
 
-**License: GPLv3 or later. See `LICENSE`.**
+**License: GPL-3.0-only, as declared in the package metadata. See [`LICENSE`](LICENSE).**
 
 ![](media/logo.png)  
 The logo consists of a cute (Qt..) snake (Python) circling a upper-case TS (symbolising the tanslation files).
@@ -195,4 +195,4 @@ Your code has been rated at 10.00/10 (previous run: 10.00/10, +0.00)
 * The development of CuteLingoExpress involved applying design-thinking methods and using GPT to refine the translation workflow and overall user experience.
 
 ## License
-CuteLingoExpress is licensed under the GNU General Public License v3.0. See [`LICENSE`](LICENSE).
+CuteLingoExpress is licensed under the GNU General Public License v3.0 only (`GPL-3.0-only`). See [`LICENSE`](LICENSE).
