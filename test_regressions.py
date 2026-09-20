@@ -287,3 +287,19 @@ class YamlKeyAnchorTests(unittest.TestCase):
         self.assertEqual(parsed['other'], 'X:Hello')
         self.assertIs(parsed['other'], parsed['again'])
         self.assertEqual(output.getvalue().count('&label '), 1)
+
+
+class CliExitStatusTests(unittest.TestCase):
+    """Automation must distinguish invalid invocations from successful commands."""
+
+    def test_invalid_invocations_exit_with_usage_error(self):
+        """Run the actual CLI as a child process, without a translation backend."""
+        for arguments in (['--lvgl-yaml', 'missing.yaml'],
+                          ['missing.ts', 'en', 'de', 'extra']):
+            with self.subTest(arguments=arguments):
+                result = subprocess.run(
+                    ['.venv/bin/python', 'auto_trans.py', *arguments],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn('Usage:', result.stdout)

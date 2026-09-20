@@ -774,7 +774,9 @@ class CliTests(unittest.TestCase):
         """
         Test that excess positional arguments are rejected with usage details.
         """
-        auto_trans.main()
+        with self.assertRaises(SystemExit) as raised:
+            auto_trans.main()
+        self.assertEqual(raised.exception.code, 2)
 
         self.assertEqual(
             mock_print.call_args_list,
@@ -805,7 +807,9 @@ class CliTests(unittest.TestCase):
     @patch("builtins.print")
     def test_main_rejects_incomplete_lvgl_yaml_mode(self, mock_print):
         """Incomplete YAML invocations should print the shared application help."""
-        auto_trans.main()
+        with self.assertRaises(SystemExit) as raised:
+            auto_trans.main()
+        self.assertEqual(raised.exception.code, 2)
 
         self.assertEqual(
             mock_print.call_args_list,

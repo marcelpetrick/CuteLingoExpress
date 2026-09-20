@@ -569,7 +569,7 @@ def main():
     if len(sys.argv) >= 2 and sys.argv[1] == '--lvgl-yaml':
         if len(sys.argv) != 5:
             print(get_help_text())
-            return
+            raise SystemExit(2)
         yaml_translation = importlib.import_module('auto_trans_yaml')
         output_path = yaml_translation.translate_yaml_file(
             sys.argv[2],
@@ -581,7 +581,7 @@ def main():
 
     if len(sys.argv) > 4:
         print(get_help_text())
-        return
+        raise SystemExit(2)
 
     ts_file_path = sys.argv[1]
     explicit_source_language = sys.argv[2] if len(sys.argv) >= 3 else None
