@@ -70,7 +70,7 @@ Invoke the side feature explicitly with `--lvgl-yaml`, followed by the YAML file
 
 The source file is never modified. A sibling output is written with the target language appended to its name; the example above creates `testing/lvgl/Template-en_US_de.yaml`. Both `.yaml` and `.yml` inputs are accepted.
 
-Only YAML values are translated. Mapping keys, nesting, comments, scalar quote and block styles, anchors, lists, numbers, booleans, and null values are preserved through `ruamel.yaml` round-trip processing. Translation calls use the same timeout and backend fallback behavior as Qt TS translation.
+Only YAML values are translated. Mapping keys, nesting, comments, scalar quote and block styles, anchors, lists, numbers, booleans, and null values are preserved through `ruamel.yaml` round-trip processing. Translation calls use the same timeout and backend fallback behavior as Qt TS translation. If an anchored string is shared by a key and values, the key keeps its original anchor and the translated values share a new, uniquely named anchor.
 
 Upon execution, the tool performs the translations and updates the `.ts` file in place. An example of the output could look like this:
 ```shell

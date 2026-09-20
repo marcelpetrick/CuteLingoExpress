@@ -3,6 +3,7 @@
 import tempfile
 import io
 import subprocess
+import warnings
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -265,3 +266,24 @@ class YamlMergeTests(unittest.TestCase):
         parser.dump(data, output)
         self.assertEqual(output.getvalue().count('title:'), 1)
         self.assertEqual(parser.load(output.getvalue())['copy']['title'], 'X:Hello')
+
+
+class YamlKeyAnchorTests(unittest.TestCase):
+    """Values shared with immutable mapping keys need distinct translated anchors."""
+
+    def test_key_alias_translation_uses_unique_anchor(self):
+        """Reload without warnings and retain sharing between translated values."""
+        parser = auto_trans_yaml.create_yaml_parser()
+        content = '? &label Hello\n: value\nother: *label\nagain: *label\n'
+        content += 'reserved: &label_translated Existing\n'
+        data = parser.load(content)
+        auto_trans_yaml.translate_yaml_node(data, 'en', 'de', lambda text, *_: 'X:' + text)
+        output = io.StringIO()
+        parser.dump(data, output)
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            parsed = parser.load(output.getvalue())
+        self.assertIn('Hello', parsed)
+        self.assertEqual(parsed['other'], 'X:Hello')
+        self.assertIs(parsed['other'], parsed['again'])
+        self.assertEqual(output.getvalue().count('&label '), 1)

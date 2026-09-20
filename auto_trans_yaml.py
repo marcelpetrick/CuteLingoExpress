@@ -5,7 +5,8 @@ The module is loaded only for ``--lvgl-yaml`` invocations so the core Qt TS
 workflow does not require a YAML parser.
 """
 
-from collections.abc import MutableMapping, MutableSequence
+from collections.abc import Mapping, MutableMapping, MutableSequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -44,16 +45,69 @@ def preserve_scalar_style(original, translated_text):
     return translated
 
 
-def translate_yaml_node(
+@dataclass
+class TranslationContext:
+    """Track aliases, immutable keys, and already reserved anchor names."""
+
+    translated: dict = field(default_factory=dict)
+    key_ids: set = field(default_factory=set)
+    anchors: set = field(default_factory=set)
+
+    def inspect(self, node, visited=None):
+        """Collect anchor names and key identities before changing any values."""
+        visited = set() if visited is None else visited
+        if id(node) in visited:
+            return
+        visited.add(id(node))
+        anchor = getattr(node, 'anchor', None)
+        if anchor is not None and anchor.value:
+            self.anchors.add(anchor.value)
+        if isinstance(node, Mapping):
+            for key, value in node.items():
+                self.key_ids.add(id(key))
+                self.inspect(key, visited)
+                self.inspect(value, visited)
+            for merged in getattr(node, 'merge', ()):
+                self.inspect(merged, visited)
+        elif isinstance(node, MutableSequence):
+            for value in node:
+                self.inspect(value, visited)
+
+    def split_key_anchor(self, original, translated):
+        """Keep the key unchanged and give translated aliases a fresh anchor."""
+        if id(original) not in self.key_ids or not hasattr(original, 'yaml_set_anchor'):
+            return translated
+        if original == translated:
+            return original
+        anchor = getattr(original, 'anchor', None)
+        if anchor is not None and anchor.value:
+            base = f'{anchor.value}_translated'
+            candidate = base
+            suffix = 1
+            while candidate in self.anchors:
+                candidate = f'{base}_{suffix}'
+                suffix += 1
+            self.anchors.add(candidate)
+            translated.yaml_set_anchor(candidate, always_dump=True)
+        return translated
+
+
+def translate_yaml_node(node, source_language, target_language, translator=translate_string):
+    """Translate values while retaining YAML aliases and immutable mapping keys."""
+    context = TranslationContext()
+    context.inspect(node)
+    return _translate_yaml_node(node, source_language, target_language, translator, context)
+
+
+def _translate_yaml_node(
     node,
     source_language,
     target_language,
-    translator=translate_string,
-    translated_nodes=None,
+    translator,
+    context,
 ):
     """Recursively translate YAML string values while leaving keys unchanged."""
-    if translated_nodes is None:
-        translated_nodes = {}
+    translated_nodes = context.translated
 
     node_id = id(node)
     if node_id in translated_nodes:
@@ -63,36 +117,38 @@ def translate_yaml_node(
         if not node.strip():
             return node
         translated_text = translator(node, source_language, target_language)
-        translated_node = preserve_scalar_style(node, translated_text)
+        translated_node = context.split_key_anchor(
+            node, preserve_scalar_style(node, translated_text),
+        )
         translated_nodes[node_id] = translated_node
         return translated_node
 
     if isinstance(node, MutableSequence):
         translated_nodes[node_id] = node
         for index, item in enumerate(node):
-            node[index] = translate_yaml_node(
+            node[index] = _translate_yaml_node(
                 item,
                 source_language,
                 target_language,
                 translator,
-                translated_nodes,
+                context,
             )
         return node
 
     if isinstance(node, MutableMapping):
         translated_nodes[node_id] = node
         for merged in getattr(node, 'merge', ()):
-            translate_yaml_node(
-                merged, source_language, target_language, translator, translated_nodes,
+            _translate_yaml_node(
+                merged, source_language, target_language, translator, context,
             )
         items = node.non_merged_items() if hasattr(node, 'non_merged_items') else node.items()
         for key, value in items:
-            node[key] = translate_yaml_node(
+            node[key] = _translate_yaml_node(
                 value,
                 source_language,
                 target_language,
                 translator,
-                translated_nodes,
+                context,
             )
         return node
 
