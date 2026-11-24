@@ -17,6 +17,7 @@ INSTALL_OK=0
 VERSION_OK=0
 PYLINT_OK=0
 TESTS_OK=0
+QT_OK=0
 CLEAN_OK=0
 BUILD_OK=0
 WHEEL_OK=0
@@ -40,11 +41,12 @@ Local project pipeline:
   4. Verify the installed runtime command
   5. Run Pylint static analysis
   6. Run unittest with coverage and generate htmlcov/index.html
-  7. Remove stale package build artifacts
-  8. Build source and wheel distributions
-  9. Install the freshly built wheel into .venv
-  10. Verify that the installed package exposes the expected version
-  11. Print a final stage-by-stage summary
+  7. Compile TS fixtures with the pinned Qt Linguist tools
+  8. Remove stale package build artifacts
+  9. Build source and wheel distributions
+  10. Install the freshly built wheel into .venv
+  11. Verify that the installed package exposes the expected version
+  12. Print a final stage-by-stage summary
 
 --noRun is accepted for compatibility with other local pipeline scripts. This
 project has no long-running application launch stage, so it currently has no
@@ -197,7 +199,7 @@ run_pylint() {
     local log_path="${PIPELINE_LOG_DIR}/pylint.log"
 
     if run_with_log "${log_path}" "${PYTHON}" -m pylint \
-        auto_trans.py auto_trans_yaml.py test_auto_trans.py test_auto_trans_yaml.py test_regressions.py test_live_translation.py ts_xml.py version.py; then
+        auto_trans.py auto_trans_yaml.py test_auto_trans.py test_auto_trans_yaml.py test_regressions.py test_live_translation.py ts_xml.py version.py packaging/smoke_bundle.py; then
         PYLINT_DETAILS="$(extract_pylint_details "${log_path}")"
         return 0
     fi
@@ -222,6 +224,28 @@ run_tests_with_coverage() {
 
     TESTS_DETAILS="$(extract_test_details "${log_path}")"
     return 1
+}
+
+compile_qt_fixtures() {
+    local qt_version qt_root compiler fixture output
+    qt_version="$(cat "${ROOT_DIR}/.qt-version")" || return 1
+    qt_root="${QT_ROOT_DIR:-${HOME}/Qt}"
+    compiler="${qt_root}/${qt_version}/gcc_64/bin/lrelease"
+
+    if [[ ! -x "${compiler}" ]]; then
+        error "Qt ${qt_version} lrelease is missing. Run ./packaging/install-qt.sh."
+        return 1
+    fi
+    if [[ "$("${compiler}" -version)" != "lrelease version ${qt_version}" ]]; then
+        error "Expected lrelease version ${qt_version} at ${compiler}."
+        return 1
+    fi
+
+    mkdir -p "${PIPELINE_LOG_DIR}" || return 1
+    for fixture in "${ROOT_DIR}"/testing/*.ts; do
+        output="${PIPELINE_LOG_DIR}/$(basename "${fixture}" .ts).qm"
+        "${compiler}" "${fixture}" -qm "${output}" && [[ -s "${output}" ]] || return 1
+    done
 }
 
 clean_package_artifacts() {
@@ -335,7 +359,14 @@ main() {
         mark_result "Tests+Coverage" "SKIP" "Skipped because dependencies are unavailable"
     fi
 
-    if [[ "${VERSION_OK}" -eq 1 && "${PYLINT_OK}" -eq 1 && "${TESTS_OK}" -eq 1 ]]; then
+    if compile_qt_fixtures; then
+        QT_OK=1
+        mark_result "Qt Linguist" "PASS" "All TS fixtures compiled to QM"
+    else
+        mark_result "Qt Linguist" "FAIL" "Catalog compilation failed"
+    fi
+
+    if [[ "${VERSION_OK}" -eq 1 && "${PYLINT_OK}" -eq 1 && "${TESTS_OK}" -eq 1 && "${QT_OK}" -eq 1 ]]; then
         if clean_package_artifacts; then
             CLEAN_OK=1
             mark_result "Clean Build" "PASS" "Stale package artifacts removed"

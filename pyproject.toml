@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools==84.0.0", "wheel==0.48.0"]
+requires = ["setuptools==84.2.1", "wheel==0.48.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -19,8 +19,11 @@ yaml = [
 ]
 dev = [
   "build==1.6.1",
-  "coverage[toml]==7.16.1",
-  "pylint==4.0.8",
+  "coverage[toml]==7.17.5",
+  "pylint==4.1.4",
+]
+bundle = [
+  "pyinstaller==6.22.3",
 ]
 
 [project.scripts]

@@ -1,73 +1,119 @@
 name: Release
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      number: ${{ steps.version.outputs.number }}
     steps:
-      - name: Checkout master
-        uses: actions/checkout@v7.0.1
-        with:
-          ref: master
-          fetch-depth: 0
+      - uses: actions/checkout@v7.0.1
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v7.0.0
+      - name: Check release tag
+        id: version
+        run: |
+          version=$(python3 -c 'from version import VERSION; print(VERSION)')
+          if [[ "${GITHUB_REF}" != "refs/tags/v${version}" ]]; then
+            echo "Run the release workflow on the tag v${version}."
+            exit 1
+          fi
+          echo "number=${version}" >> "${GITHUB_OUTPUT}"
+
+  validate:
+    needs: version
+    uses: ./.github/workflows/local-pipeline.yml
+
+  bundle:
+    needs: version
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            asset: linux-x86_64.AppImage
+          - os: windows-2025
+            asset: windows-x86_64.zip
+    runs-on: ${{ matrix.os }}
+    env:
+      VERSION: ${{ needs.version.outputs.number }}
+      ASSET_SUFFIX: ${{ matrix.asset }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
-        run: pip install -e ".[dev,yaml]"
-
-      - name: Pylint
-        run: >-
-          python -m pylint auto_trans.py auto_trans_yaml.py test_auto_trans.py
-          test_auto_trans_yaml.py test_regressions.py test_live_translation.py ts_xml.py version.py
-
-      - name: Tests with coverage
+      - name: Build the standalone CLI
         run: |
-          python -m coverage run -m unittest
-          python -m coverage report -m
+          python -m pip install ".[bundle,yaml]"
+          python -m PyInstaller --noconfirm --noupx --name cutelingoexpress --distpath bundle --workpath build/frozen --specpath build --hidden-import translators --hidden-import auto_trans_yaml auto_trans.py
 
-      - name: Read version
-        id: version
+      - name: Package and test the Linux AppImage
+        if: runner.os == 'Linux'
         run: |
-          VERSION=$(python -c "import version; print(version.VERSION)")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          mkdir -p release
+          appimage="release/CuteLingoExpress-${VERSION}-${ASSET_SUFFIX}"
+          ./packaging/build-appimage.sh bundle/cutelingoexpress "${appimage}"
+          python packaging/smoke_bundle.py "${appimage}" "${VERSION}"
 
-      - name: Verify release tag
+      - name: Package and test the Windows ZIP
+        if: runner.os == 'Windows'
+        shell: pwsh
         run: |
-          tag="${{ steps.version.outputs.tag }}"
-          if git show-ref --verify --quiet "refs/tags/${tag}"; then
-            if [[ "$(git rev-parse "refs/tags/${tag}^{commit}")" != "$(git rev-parse HEAD)" ]]; then
-              echo "Tag ${tag} belongs to another commit; bump the version before releasing."
-              exit 1
-            fi
-          fi
+          New-Item -ItemType Directory -Path release | Out-Null
+          Copy-Item LICENSE bundle/cutelingoexpress/
+          $archive = "release/CuteLingoExpress-$env:VERSION-$env:ASSET_SUFFIX"
+          Compress-Archive -Path bundle/cutelingoexpress -DestinationPath $archive
+          Expand-Archive -Path $archive -DestinationPath build/smoke
+          python packaging/smoke_bundle.py build/smoke/cutelingoexpress/cutelingoexpress.exe $env:VERSION
 
-      - name: Build package
-        run: python -m build
-
-      - name: Create and push tag
-        run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
-          tag="${{ steps.version.outputs.tag }}"
-          if ! git show-ref --verify --quiet "refs/tags/${tag}"; then
-            git tag -a "${tag}" -m "Release ${tag}"
-          fi
-          git push origin "refs/tags/${tag}"
-
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v3.0.3
+      - name: Upload standalone bundle
+        uses: actions/upload-artifact@v7.0.2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: CuteLingoExpress ${{ steps.version.outputs.version }}
-          files: dist/*
-          generate_release_notes: true
+          name: ${{ matrix.asset }}
+          path: release/*
+          if-no-files-found: error
+
+  publish:
+    needs: [version, validate, bundle]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.number }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v8.0.2
+        with:
+          path: release
+
+      - name: Verify release files
+        run: |
+          test -s "release/python-packages/cutelingoexpress-${VERSION}-py3-none-any.whl"
+          test -s "release/python-packages/cutelingoexpress-${VERSION}.tar.gz"
+          test -s "release/linux-x86_64.AppImage/CuteLingoExpress-${VERSION}-linux-x86_64.AppImage"
+          test -s "release/windows-x86_64.zip/CuteLingoExpress-${VERSION}-windows-x86_64.zip"
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v3.0.4
+        with:
+          name: CuteLingoExpress ${{ needs.version.outputs.number }}
+          body_path: CHANGELOG.md
+          files: |
+            release/python-packages/*
+            release/linux-x86_64.AppImage/*.AppImage
+            release/windows-x86_64.zip/*.zip
+          fail_on_unmatched_files: true

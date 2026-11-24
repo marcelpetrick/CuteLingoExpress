@@ -1,6 +1,7 @@
 """Regression tests for issues found in the repository review."""
 
 import tempfile
+import os
 import io
 import subprocess
 import sys
@@ -306,51 +307,30 @@ class CliExitStatusTests(unittest.TestCase):
                 self.assertIn('Usage:', result.stdout)
 
 
-class ReleaseRetryTests(unittest.TestCase):
-    """Run release tag steps against isolated repositories and a local remote."""
+class ReleaseTagTests(unittest.TestCase):
+    """Run the release's tag gate with different GitHub workflow refs."""
 
-    @staticmethod
-    def git(repository, *arguments):
-        """Execute a checked Git command without touching the working repository."""
-        return subprocess.run(['git', '-C', str(repository), *arguments],
-                              capture_output=True, text=True, check=True)
-
-    @staticmethod
-    def run_step(repository, publish=False):
-        """Execute the workflow's actual shell step with test expression values."""
+    def test_release_uses_only_the_tag_matching_the_checked_out_version(self):
+        """A retry can use the same tag, and a branch or mismatched tag is rejected."""
         workflow = auto_trans_yaml.create_yaml_parser().load(
             Path('.github/workflows/release.yml').read_text(encoding='utf-8')
         )
-        names = (('Create and push tag',) if publish else
-                 ('Fail if tag already exists', 'Verify release tag'))
-        step = next(step for step in workflow['jobs']['release']['steps'] if step['name'] in names)
-        command = step['run'].replace('${{ steps.version.outputs.tag }}', 'v1.2.3')
-        command = command.replace('${{ github.actor }}', 'regression-test')
-        return subprocess.run(['bash', '-e', '-c', command], cwd=repository,
-                              capture_output=True, text=True, check=False)
-
-    def test_release_retry_accepts_same_commit_and_rejects_different_commit(self):
-        """An already-pushed tag is resumable only for its exact commit."""
+        step = next(step for step in workflow['jobs']['version']['steps']
+                    if step.get('id') == 'version')
         with tempfile.TemporaryDirectory() as directory:
-            repository = Path(directory) / 'work'
-            remote = Path(directory) / 'remote.git'
-            repository.mkdir()
-            remote.mkdir()
-            self.git(remote, 'init', '--bare')
-            self.git(repository, 'init')
-            self.git(repository, 'config', 'user.name', 'Regression Test')
-            self.git(repository, 'config', 'user.email', 'test@example.invalid')
-            self.git(repository, 'config', 'commit.gpgsign', 'false')
-            self.git(repository, 'config', 'tag.gpgsign', 'false')
-            self.git(repository, 'remote', 'add', 'origin', str(remote))
-            self.git(repository, 'commit', '--allow-empty', '-m', 'test fixture')
-            self.assertEqual(self.run_step(repository).returncode, 0)
-            self.assertEqual(self.run_step(repository, publish=True).returncode, 0)
-            retry = self.run_step(repository)
-            self.assertEqual(retry.returncode, 0, retry.stderr + retry.stdout)
-            self.assertEqual(self.run_step(repository, publish=True).returncode, 0)
-            self.git(repository, 'commit', '--allow-empty', '-m', 'different commit')
-            self.assertNotEqual(self.run_step(repository).returncode, 0)
+            output_path = Path(directory) / 'output'
+            (Path(directory) / 'version.py').write_text('VERSION = "1.2.3"\n', encoding='utf-8')
+            for ref, expected_status in (('refs/tags/v1.2.3', 0),
+                                         ('refs/heads/master', 1),
+                                         ('refs/tags/v1.2.4', 1)):
+                with self.subTest(ref=ref):
+                    result = subprocess.run(
+                        ['bash', '-e', '-c', step['run']], cwd=directory,
+                        env={**os.environ, 'GITHUB_REF': ref, 'GITHUB_OUTPUT': str(output_path)},
+                        capture_output=True, text=True, check=False,
+                    )
+                    self.assertEqual(result.returncode, expected_status, result.stderr)
+            self.assertEqual(output_path.read_text(encoding='utf-8'), 'number=1.2.3\n')
 
 
 class NewlinePreservationTests(unittest.TestCase):

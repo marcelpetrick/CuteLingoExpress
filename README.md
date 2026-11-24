@@ -1,7 +1,7 @@
 # CuteLingoExpress
 
 [![Local Pipeline](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/local-pipeline.yml/badge.svg?branch=master)](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/local-pipeline.yml)
-[![Manual Release](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/release.yml/badge.svg)](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/release.yml)
+[![Release](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/release.yml/badge.svg)](https://github.com/marcelpetrick/CuteLingoExpress/actions/workflows/release.yml)
 [![Latest Release](https://img.shields.io/github/v/release/marcelpetrick/CuteLingoExpress?sort=semver)](https://github.com/marcelpetrick/CuteLingoExpress/releases/latest)
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776ab.svg)](https://www.python.org/)
@@ -29,6 +29,10 @@ Internationalization plays a crucial role in developing successful applications,
 # Usage
 
 ## Setup
+The [latest GitHub release](https://github.com/marcelpetrick/CuteLingoExpress/releases/latest) provides standalone x86-64 downloads with Qt TS and LVGL YAML support. On Linux, mark the AppImage executable and run it from a terminal. On Windows, extract the entire ZIP and run `cutelingoexpress.exe` from its extracted folder.
+
+### Python installation
+
 The project requires Python 3.12 or newer. Dependencies are pinned in [`pyproject.toml`](pyproject.toml), including `translators==6.0.4`; there are no `requirements.txt` files.
 
 For local development of the core Qt TS workflow, create the virtual environment and install the package with development dependencies:
@@ -81,7 +85,7 @@ Only YAML values are translated. Mapping keys, nesting, comments, scalar quote a
 
 ## Versioning
 CuteLingoExpress follows Semantic Versioning (`MAJOR.MINOR.PATCH`).  
-Current application version is v0.4.0. The release workflow creates the matching Git tag.
+Current application version is v0.4.1. GitHub Releases publishes each tagged version.
 
 The version is actively used across the lifecycle:
 * The single source of truth is [`version.py`](version.py).
@@ -91,17 +95,15 @@ The version is actively used across the lifecycle:
 * Runtime, build-system, development, and optional YAML dependencies are pinned in [`pyproject.toml`](pyproject.toml). The `yaml` extra is not installed for normal Qt TS use.
 
 ## Local pipeline
-Run the complete local validation pipeline with:
-```sh
-./localPipeline.sh
-```
 
-The pipeline creates or reuses `.venv` with Python 3.12 or newer, installs the project with development and optional YAML dependencies, checks the runtime version, runs Pylint, runs all Qt TS and YAML tests with coverage, generates `htmlcov/index.html`, builds source and wheel distributions, installs the freshly built wheel, and verifies the installed package version.
+On x86-64 Linux, install the Qt Linguist tools pinned in [`.qt-version`](.qt-version) before the first pipeline run. The installer uses `curl` and `bsdtar` and defaults to `~/Qt`. Set `QT_ROOT_DIR` for both commands to use another location.
 
-`--noRun` is accepted for compatibility with other projects, but CuteLingoExpress has no long-running application launch stage:
 ```sh
+./packaging/install-qt.sh
 ./localPipeline.sh --noRun
 ```
+
+The pipeline creates or reuses `.venv` with Python 3.12 or newer, installs the project with development and optional YAML dependencies, checks the runtime version, runs Pylint and the offline unit tests with coverage, and compiles the TS fixtures with Qt's `lrelease`. It generates `htmlcov/index.html`, builds source and wheel distributions, installs the freshly built wheel, and verifies the installed package version.
 
 After the pipeline succeeds, the built wheel is installed into `.venv`, so real translation work can be started with:
 ```sh

@@ -6,6 +6,7 @@ on:
       - master
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -13,32 +14,40 @@ permissions:
 jobs:
   local-pipeline:
     name: Local pipeline replica
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v7.0.1
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v7.0.0
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.12"
+
+      - name: Install pinned Qt Linguist tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libarchive-tools libbrotli1 libglib2.0-0t64 libgssapi-krb5-2
+          export QT_ROOT_DIR="${RUNNER_TEMP}/Qt"
+          echo "QT_ROOT_DIR=${QT_ROOT_DIR}" >> "${GITHUB_ENV}"
+          ./packaging/install-qt.sh
 
       - name: Run local pipeline
         run: ./localPipeline.sh --noRun
 
       - name: Upload package artifacts
-        if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: python-packages
-          path: dist/*
-          if-no-files-found: ignore
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: coverage-html
           path: htmlcov
